@@ -26,7 +26,7 @@ wp.useSPX=3;
 % histogram bins for envelope of field potential (needed for subtraction of
 % base line in autocorr computation): noise is rarely above 50 uV peak to
 % peak, and envelope is strictly positive
-wp.envAmpBin=0:.001:.1;
+wp.envAmpBin=0:.0002:.03;
 % interval in which to find peak of envelope of burst
 wp.buPeakFindIntv=[-5 500];
 
@@ -44,7 +44,6 @@ fileNameIx=strmatch('fileName',parNm);
 chanNameIx=strmatch('chanName',parNm);
 drug1_concIx=strmatch('drug1_conc',parNm);
 drug1_applicRankIx=strmatch('drug1_applicRank',parNm);
-recSiteIx=strmatch('recSite',parNm);
 undef1Ix=strmatch('undef1',parNm);
 undef2Ix=strmatch('undef2',parNm);
 
@@ -58,19 +57,15 @@ doUseMeanSlopeThresh=false;
 if ~isfield(ap,'minLongBurstLength')
   ap.minLongBurstLength=inf;
 end
-% §§ deactivated April 12 because spectra are computed from continuous
-% traces (not bursts anymore)
-% % catch obvious blunders in intervals for spec analysis
-% if ap.minLongBurstLength<ap.ppSeg+diff(ap.winBuCutout)
-%   error(['minimal ''long'' burst length is too small']);
-% end
+% catch obvious blunders in intervals for spec analysis
+if ap.minLongBurstLength<ap.ppSeg+diff(ap.winBuCutout)
+  error(['minimal ''long'' burst length is too small']);
+end
 
 % - simple checks of peth parameters:
 % check whether there's a bin with zero as its left border (while doing so
 % generate a fake results array as a template)
-[hstTemplate,pethBin]=etslpeth([1 1],1,'interval',ap.pethIntv,'binw',ap.pethBinW,'bin',ap.pethBin);
-% same for the peth around silent period beginnings
-[spHstTemplate,spPethBin]=etslpeth([1 1],1,'interval',ap.spPethIntv,'binw',ap.spPethBinW,'bin',ap.spPethBin);
+[hstTemplate,pethBin]=tslpeth(1,1,'interval',ap.pethIntv,'binw',ap.pethBinW);
 % ** hstTemplate, and thus the preallocated variable holding all
 % histograms, must be all nans (as opposed to zeros) because this is how
 % recordings with zero events should be represented
@@ -78,11 +73,6 @@ hstTemplate=nan*hstTemplate;
 if isempty(find(pethBin==0))
   error('the bins for the PETH must include a bin with zero as its left border');
 end
-spHstTemplate=nan*spHstTemplate;
-if isempty(find(pethBin==0))
-  error('the bins for the silent period PETH must include a bin with zero as its left border');
-end
-
 % see whether pefr intervals are included in pethBin and, while doing so,
 % generate indices into pethBin
 tmp={'ap.pethEarlyFrIntv','ap.pethIntermedFrIntv','ap.pethLateFrIntv'};
@@ -93,14 +83,6 @@ for g=1:3
   end
   pethBinIx{g}=find(pethBin>=intv(1) & pethBin<intv(2));
 end
-tmp={'ap.pethEarlyFrIntv','ap.pethIntermedFrIntv','ap.pethLateFrIntv'};
-
-
-if ap.spPethEarlyFrIntv(1)<ap.spPethIntv(1) || ap.spPethEarlyFrIntv(2)>ap.spPethIntv(2)
-  error(['ap.spPethEarlyFrIntv must be completely enclosed by ap.spPethIntv']);
-end
-spPethBinIx{1}=find(spPethBin>=ap.spPethEarlyFrIntv(1) & spPethBin<ap.spPethEarlyFrIntv(2));
-
 
 % make sure that all dependent parameters requested are part of the
 % staple computed here. 
@@ -126,7 +108,7 @@ masterDepPar={...
   'mdBurstLen',           1, 1;... % median of length of bursts
   'maxBurstLen',          1, 1;... % length of longest burst
   'cvBurstLen',           1, 1;... % cv of length of bursts
-  'asBurstLen',           1, 1;... % asymmetry of length of bursts
+  'asBurstLen',           1, 1;... % asymmetry of length of bursts: (95th percentile-median)/(median-5th percentile)
   'burstRate',            1, 1;... % burst rate
   'mnSilentPerLen',       1, 1;... % mean length of silent period
   'mdSilentPerLen',       1, 1;... % median of length of silent period
@@ -135,10 +117,6 @@ masterDepPar={...
   'asSilentPerLen',       1, 1;... % asymmetry of length of silent period
   'specpower',            1, 1;... % power in freq band to be specified below
   'eventRate'           , 1, 2;... % firing rates
-  'cvISI'               , 1, 2;...% cv of inter-spike-interval
-  'eventRateInBurst'    , 1, 2;... % average firing rate within bursts
-  'fractionEvInBurst'   , 1, 2;... % fraction of spx inside bursts  
-  'fractionEvOutBurst'  , 1, 2;... % fraction of spx outside bursts
   'mnPethEarlyFr'       , 1, 2;... % mean of early firing rate
   'stdPethEarlyFr'      , 1, 2;... % std of early firing rate
   'cvPethEarlyFr'       , 1, 2;... % cv of early firing rate
@@ -148,13 +126,6 @@ masterDepPar={...
   'mnPethLateFr'        , 1, 2;... % mean of late firing rate  
   'stdPethLateFr'       , 1, 2;... % std of late firing rate
   'cvPethLateFr'        , 1, 2;... % cv of late firing rate    
-  'mnSpPethFr'   , 1, 2;... % mean of silent period early firing rate
-  'stdSpPethFr'  , 1, 2;... % std of silent period early firing rate
-  'cvSpPethFr'   , 1, 2;... % cv of silent period early firing rate
-  'mnSTA'               , 1, 2;... % mean of spike triggered average of LFP
-  'stdSTA'              , 1, 2;... % std of spike triggered average of LFP
-  'cvSTA'               , 1, 2;... % cv of spike triggered average of LFP  
-  'mdSTA'               , 1, 2;... % median of spike triggered average of LFP    
 };
 
 tmp=setdiff(ap.depPar(:,1),masterDepPar(:,1));
@@ -165,9 +136,9 @@ end
 nMasterDepPar=size(masterDepPar,1);
 nDepPar=size(ap.depPar,1);
 
-% do autocorr, spectral analysis, burst analysis requiring raw data, spx
-% analysis and STA analysis depending on choice of plot parameters (the
-% standard burst analysis will be done unconditionally) 
+% do autocorr, spectral analysis, burst analysis requiring raw data and spx
+% analysis depending on choice of plot parameters (the standard burst
+% analysis will be done unconditionally) 
 doAutoCorrAnalysis=ismember('autoCDecay',ap.depPar(:,1));
 doSpecAnalysis=ismember('specpower',ap.depPar(:,1));
 doBurstIntegralAnalysis=any(ismember(...
@@ -183,10 +154,6 @@ doBurstIntegralAnalysis=any(ismember(...
   ap.depPar(:,1)));
 doSpxAnalysis=any(ismember(...
   {'eventRate'        ,... 
-  'cvISI'             ,...
-  'eventRateInBurst'  ,...
-  'fractionEvInBurst' ,...
-  'fractionEvOutBurst',...
   'mnPethEarlyFr'     ,... 
   'stdPethEarlyFr'    ,... 
   'cvPethEarlyFr'     ,... 
@@ -195,17 +162,7 @@ doSpxAnalysis=any(ismember(...
   'cvPethIntermedFr'  ,... 
   'mnPethLateFr'      ,... 
   'stdPethLateFr'     ,... 
-  'cvPethLateFr'      ,... 
-  'mnSpPethFr' ,... 
-  'stdSpPethFr',... 
-  'cvSpPethFr' ,... 
-  },...
-  ap.depPar(:,1)));
-doSTAAnalysis=any(ismember(...
-  {'mnSTA',...
-  'stdSTA',...  
-  'cvSTA',...    
-  'mdSTA'},... 
+  'cvPethLateFr'}     ,... 
   ap.depPar(:,1)));
 
 % -------------------------------------------------------------------------
@@ -284,7 +241,7 @@ if strcmp(indepPar(aIndepIx).name,'drug1_conc')
   % check whether drug 1 applic rank order of control (as defined by conc==0) is 0
   tmpIx=indepPar(drug1_concIx).d==0 & indepPar(drug1_applicRankIx).d~=0;
   if any(tmpIx)
-    warndlg({'In ';' '; strvcat(indepPar(expIDIx).d{tmpIx}); ' '; 'at least one control recording (defined as [drug1]=0) has an application rank different from 0 - make sure that this is correct'});
+    warndlg({'In ';' '; strvcat(indepPar(expIDIx).d{tmpIx}); ' '; 'at least one control recording (defined as [drug1]=0) has an application rank different from 0 - make sure that this is correct';'(If so and you don''t want this message to keep popping up talk to HH'});
   end
 end
 
@@ -320,10 +277,6 @@ powScaleFac=ap.sampleFreq/(2*round(ap.ppSeg/ap.sampleFreq*1000));
 % --- dimensions of cell array containing variably sized values (tsl):
 %   <one row> | indep par value | <unique combin experiment, channel>
 vsTemplate=cell([1 indepParNLevel nUExpChan]);
-% a container for burst-by-burst peths
-RawPeth=vsTemplate;
-% same for silent period peths
-SPRawPeth=vsTemplate;
 % it is fortunate for various reasons if the individual cells of
 % tsl-containing variables contain zero-row templates of etsl
 [vsTemplate{:}]=deal(zeros(0,etslc.nCol));
@@ -350,11 +303,7 @@ psDensStd=psDensMn;
 pethTemplate=repmat(hstTemplate,[1 indepParNLevel nUExpChan]);
 pethMn=pethTemplate;
 pethStd=pethTemplate;
-pethN=pethTemplate;
-spPethTemplate=repmat(spHstTemplate,[1 indepParNLevel nUExpChan]);
-spPethMn=spPethTemplate;
-spPethStd=spPethTemplate;
-spPethN=spPethTemplate;
+
 % --- dimensions of SCALAR values like burst length:
 %   <one row> | indep par value | <unique combin experiment, channel>
 scalarTemplate=repmat(nan,[1 indepParNLevel nUExpChan]);
@@ -400,13 +349,6 @@ specpower=scalarTemplate;
 
 % - firing rates
 eventRate=scalarTemplate;
-% - cv of ISI
-cvISI=scalarTemplate;
-% - average firing rate within bursts
-eventRateInBurst=scalarTemplate;
-% - fraction of spx in and outside bursts
-fractionEvInBurst=scalarTemplate;
-fractionEvOutBurst=scalarTemplate;
 % - mean, std and cv of early, intermediate and late fr
 mnPethEarlyFr=scalarTemplate;
 stdPethEarlyFr=scalarTemplate;
@@ -417,20 +359,9 @@ cvPethIntermedFr=scalarTemplate;
 mnPethLateFr=scalarTemplate;
 stdPethLateFr=scalarTemplate;
 cvPethLateFr=scalarTemplate;
-% - mean, std and cv of early silent period fr
-mnSpPethFr=scalarTemplate;
-stdSpPethFr=scalarTemplate;
-cvSpPethFr=scalarTemplate;
 
-% - mean, std, cv and median of STA
-mnSTA=scalarTemplate;
-stdSTA=scalarTemplate;
-cvSTA=scalarTemplate;
-mdSTA=scalarTemplate;
-% application rank order, rec site, undef1 and undef2 may also be useful 
-% for advanced post-processing
+% also export application rank order, undef1 and undef2 (may be useful)
 drug1_applicRank=scalarTemplate;
-recSite=scalarTemplate;
 undef1=scalarTemplate;
 undef2=scalarTemplate;
 % important: have a 1D cell array with as many elements as the results
@@ -441,7 +372,6 @@ expChanName=cell(1,nUExpChan);
 fileInfo.dDir='';
 fileInfo.fileName='';
 fileInfo.chName='';
-fileInfo.recSite=nan;
 fileInfo.recTime=nan;
 fileInfo.si=nan;
 fileInfo.winBuCutout=ap.winBuCutout;
@@ -505,29 +435,11 @@ for g=1:nExp
       curLevel=indepPar(aIndepIx).d(curExpChanIx(i));
       % index to column
       colIx=curLevel==indepParLevel;
-      % ** set flags for the different analyses
+      % set flags for the different analyses
       doAC=doAutoCorrAnalysis;
       doSA=doSpecAnalysis;
       doBIA=doBurstIntegralAnalysis;
       doSPX=doSpxAnalysis;
-      doSTA=doSTAAnalysis;
-      % modify, heeding value of isValid
-      switch isValid
-        case wp.useFPSPX
-          % all fp and spx analyses possible
-        case wp.useFP
-          % only fp analyses possible
-          doSPX=false;
-          doSTA=false;
-        case wp.useSPX
-          % only spx analysis
-          doBIA=false;
-          doAC=false;
-          doSA=false;
-        otherwise
-          error('internal: invalid value for ''use this recording''')
-      end
-
       % file name without extension as listed in master table
       curFnBase=indepPar(fileNameIx).d{curExpChanIx(i)};
       % name of FP results file
@@ -544,97 +456,88 @@ for g=1:nExp
       % the data were found or not
       fileInfo(1,colIx,masterSliceIx).fileName=curFnBase;
       fileInfo(1,colIx,masterSliceIx).dDir=datDir;
-      fileInfo(1,colIx,masterSliceIx).chName=curDeblankChName;   
-      fileInfo(1,colIx,masterSliceIx).recSite=indepPar(recSiteIx).d(curExpChanIx(i));
+      fileInfo(1,colIx,masterSliceIx).chName=curDeblankChName;      
       % also, collect all independent parameters to be saved in a format
       % identical to the scalar results variables
-      
-      drug1_conc(1,colIx,masterSliceIx)=indepPar(drug1_concIx).d(curExpChanIx(i));
       drug1_applicRank(1,colIx,masterSliceIx)=indepPar(drug1_applicRankIx).d(curExpChanIx(i));
-      recSite(1,colIx,masterSliceIx)=indepPar(recSiteIx).d(curExpChanIx(i));
       undef1(1,colIx,masterSliceIx)=indepPar(undef1Ix).d(curExpChanIx(i));
       undef2(1,colIx,masterSliceIx)=indepPar(undef2Ix).d(curExpChanIx(i));      
       % -------------------------------------------------------------------
       % ---------------------- reading data -------------------------------
       % -------------------------------------------------------------------
       
-      % ------- load general information ------------      
-      % essential information on the recording can be extracted from any of
-      % the files pertaining to a recording, but as the odd file may be
-      % missing try to retrieve this information here, independent of the
-      % data proper.
-      fList={[datDir '\' curFnFpRes '.mat'],...
-        [datDir '\' curFnMpRes '.mat'],...
-        [datDir '\' curFnSpxRes '.mat']};
-      fExist=[exist(fList{1},'file'),exist(fList{2},'file'),exist(fList{3},'file')];
-      % pick either FP/MP or SPX file for header info
+      % ------- load FP/MP burst results & general information ------------
+      fExist=[exist([datDir '\' curFnFpRes '.mat'],'file'),...
+        exist([datDir '\' curFnMpRes '.mat'],'file')];
+      % *** by default assume that the data are from extracellular
+      % recordings (§ parameter not yet used)
+      isExtraRec=true;
       if any(fExist)
-        load(fList{find(fExist,1)},'head');
+        if fExist(1)
+          load([datDir '\' curFnFpRes '.mat']);
+        else
+          load([datDir '\' curFnMpRes '.mat']);
+          isExtraRec=false;
+          doBIA=false;
+          doAC=false;
+          doSA=false;
+        end          
+        % ** collect vital information on recording: **
         % recording time in s
         fileInfo(1,colIx,masterSliceIx).recTime=head.ds.fileInfo.recTime;
-        % sampling interval of downsampled (interpolated) data used here
+        % §§§ sampling interval of downsampled (interpolated) data used here
         fileInfo(1,colIx,masterSliceIx).si=1e6/ap.sampleFreq;
-      end
-      % generate empty vars
-      etsl=[];
-      silentEtsl=[];
-      tsl=[];
-
-      % ------- load FP/MP burst results ------------
-      if (isValid==wp.useFP || isValid==wp.useFPSPX)
-        fExist=fExist(1:2);
-        if any(fExist)
-          if fExist(1)
-            isExtraRec=true;
-            load([datDir '\' curFnFpRes '.mat']);
+        % detach etsl, silentEtsl and stats
+        etsl=bu.etsl;
+        silentEtsl=bu.silentEtsl;
+        stats=bu.stats;
+        if isempty(etsl)
+          warning('no FP or MP bursts detected');
+          filesEmptyEtsl{end+1}=curFnBase;
+        end
+        if ~isfield(stats,'cIntv')
+          % if this is not an empty etsl...
+          if ~isempty(etsl)
+            % infer cIntvSpan from relative time spent in active state
+            % (imprecise)
+            cIntvSpan=sum(etsl(:,etslc.durCol))/stats.relTimeInBurst;
           else
-            load([datDir '\' curFnMpRes '.mat']);
-            isExtraRec=false;
-            doBIA=false;
-            doAC=true;
-            doSA=false;
-          end
-          % detach etsl, silentEtsl and stats
-          etsl=bu.etsl;
-          silentEtsl=bu.silentEtsl;
-          stats=bu.stats;
-          if isempty(etsl)
-            warning('no FP or MP bursts detected');
-            filesEmptyEtsl{end+1}=curFnBase;
-          end
-          if ~isfield(stats,'cIntv')
-            % if this is not an empty etsl...
-            if ~isempty(etsl)
-              % infer cIntvSpan from relative time spent in active state
-              % (imprecise)
-              cIntvSpan=sum(etsl(:,etslc.durCol))/stats.relTimeInBurst;
-            else
-              % empty etsl means no burst detected (not necessarily an
-              % invalid recording), so don't put an error or warning
-              cIntvSpan=nan; % diff(head.ds.fileInfo.recTime)*1000;
-            end
-          else
-            % in an early version of etslstats.m, .cIntv was a single
-            % number representing the 'interval span', so use it
-            if numel(stats.cIntv)==1
-              cIntvSpan=stats.cIntv;
-            else
-              cIntvSpan=diff(stats.cIntv);
-            end
+            % empty etsl means no burst detected (not necessarily an
+            % invalid recording), so don't put an error or warning
+            cIntvSpan=nan; % diff(head.ds.fileInfo.recTime)*1000;
           end
         else
-          % §§ there's an ambiguity here: it cannot be resolved whether the
-          % file looked for but not found is a FP or a MP one. Collect them
-          % in the list of missing FP files for now.
-          filesNotFound.fpEtsl{end+1}=curFnFpRes;
-          etsl=[];
-          silentEtsl=[];
+          cIntvSpan=diff(stats.cIntv);
         end
+      else
+        % §§ there's an ambiguity here: it cannot be resolved whether the
+        % file looked for but not found is a FP or a MP one. Collect them
+        % in the list of missing FP files for now.
+        filesNotFound.fpEtsl{end+1}=curFnFpRes;
+        etsl=[];
+        silentEtsl=[];
+      end
+      
+      % at this point heed the value of isValid
+      switch isValid
+        case 1
+          % fp and spx analysis
+        case 2
+          % only fp analysis
+          doSPX=false;
+        case 3
+          % only spx analysis
+          doBIA=false;
+          doAC=false;
+          doSA=false;
+          etsl=[];
+          silentEtsl=false;
+        otherwise
+          error('internal: invalid value for ''use this recording''')
       end
       
       % -------------- raw or preconditioned FP data ----------------------
-      % no need to check for isValid, has been done above
-      if doBIA || doAC || doSA || doSTA
+      if doBIA || doAC || doSA
         isExistentFile=[exist([datDir '\' curFnBase '.mat'],'file'),...
           exist([datDir '\' curFnBase '.abf'],'file')];
         if ~any(isExistentFile)
@@ -642,7 +545,6 @@ for g=1:nExp
           doBIA=false;
           doAC=false;
           doSA=false;
-          doSTA=false;          
           % no need to do anything to collected results variables because
           % they are preallocated with nans (all other)
         else
@@ -652,8 +554,6 @@ for g=1:nExp
           % consuming)
           if isExistentFile(1)
             [d,si,fi]=matDload([datDir '\' curFnBase '.mat'],'channels',{curDeblankChName});
-            % clear si because it is not meant to be used (use fi.si)
-            clear si
             % check whether filter freq and sampling freq match
             if ~isalmost(fi.si,1e6/ap.sampleFreq,.01)
               error('sampling frequency of *.mat file containing raw data does not correspond to currently chosen ap.sampleFreq - either change ap.sampleFreq or recreate raw data files with current ap.sampleFreq');
@@ -690,10 +590,10 @@ for g=1:nExp
       end
 
       % ------- load SPX results  ---------------------------------
-      % again, no need to check isValid
-      if doSPX || doSTA    
+      tsl=[];
+      if doSPX
         if exist([datDir '\' curFnSpxRes '.mat'],'file')
-          % load evt
+          % load only evt
           load([datDir '\' curFnSpxRes '.mat'],'evt');
           % accomodate old versions of results data in which neither tsl
           % nor etsl were cells; also, make sure data are not from multiple
@@ -725,19 +625,9 @@ for g=1:nExp
         % are preallocated with nans, so there will be no funny gaps. We
         % don't want to insert an empty matrix where there is already an
         % array of NaNs, so leave Etsl alone.
-        
-        % addition Feb 2012, corrected Jan 2013: if *MP* or *FP* file
-        % exists but etsl is empty, two bu parameters should be set to
-        % zero, otherwise they MUST REMAIN NAN:
-        if any(fExist([1 2]))
-          relTimeInBurst(1,colIx,masterSliceIx)=0;
-          burstRate(1,colIx,masterSliceIx)=0;
-        end
-        
-        % §§ FLAG BELOW DEACTIVATED JAN 2012
-        %         % By extension, spectral analysis won't happen, either, because it
-        %         % is done on bursts only
-        %         doSA=false;
+        % By extension, spectral analysis won't happen, either, because it
+        % is done on bursts only
+        doSA=false;
       else
         % --- analyses of burst peak/strength/integral
         if doBIA
@@ -768,7 +658,7 @@ for g=1:nExp
           stdBurstPeak(1,colIx,masterSliceIx)=nanstd(r.maxPeak);
           tmpx=prctile(r.maxPeak,[5 50 95]);
           mdBurstPeak(1,colIx,masterSliceIx)=tmpx(2);
-          asBurstPeak(1,colIx,masterSliceIx)=(tmpx(3)-2*tmpx(2)+tmpx(1))/(tmpx(3)-tmpx(1));
+          asBurstPeak(1,colIx,masterSliceIx)=(tmpx(3)-tmpx(2))/(tmpx(2)-tmpx(1));
           % - place into corresponding column in etsl
           etsl(:,etslc.amplCol)=r.maxPeak';
           % compute integral of envelope, heeding units (mV*s):
@@ -781,7 +671,7 @@ for g=1:nExp
           stdBurstStrength(1,colIx,masterSliceIx)=std(buI);
           tmpx=prctile(buI,[5 50 95]);
           mdBurstStrength(1,colIx,masterSliceIx)=tmpx(2);
-          asBurstStrength(1,colIx,masterSliceIx)=(tmpx(3)-2*tmpx(2)+tmpx(1))/(tmpx(3)-tmpx(1));
+          asBurstStrength(1,colIx,masterSliceIx)=(tmpx(3)-tmpx(2))/(tmpx(2)-tmpx(1));
           % - sum of burst integrals divided by recording time (unit: mV)
           burstIntegral(1,colIx,masterSliceIx)=sum(buI)/(cIntvSpan/1000);
         end
@@ -789,42 +679,44 @@ for g=1:nExp
         Etsl{1,colIx,masterSliceIx}=etsl;
         SilentEtsl{1,colIx,masterSliceIx}=silentEtsl;
         % ----- burst statistics: 
-        stats=etslstats(bu.etsl,bu.silentEtsl); 
         % - relative time spent in bursts ('active' time)
         relTimeInBurst(1,colIx,masterSliceIx)=stats.relTimeInBurst;
-        % - length of bursts: mean, std, etc. 
+        % -  mean, std length of bursts
         mnBurstLen(1,colIx,masterSliceIx)=stats.mnBurstLen;
         stdBurstLen(1,colIx,masterSliceIx)=stats.stdBurstLen;
-        maxBurstLen(1,colIx,masterSliceIx)=stats.maxBurstLen;
-        mdBurstLen(1,colIx,masterSliceIx)=stats.mdBurstLen;
-        asBurstLen(1,colIx,masterSliceIx)=stats.asBurstLen;
+        maxBurstLen(1,colIx,masterSliceIx)=max(etsl(:,etslc.durCol));
+        
         % - burst rate
         burstRate(1,colIx,masterSliceIx)=stats.burstRate;
-        % - length of silent period: mean, std, etc. 
+        % - mean, std length of silent period
         mnSilentPerLen(1,colIx,masterSliceIx)=stats.mnSilentPerLen;
         stdSilentPerLen(1,colIx,masterSliceIx)=stats.stdSilentPerLen;
-        maxSilentPerLen(1,colIx,masterSliceIx)=stats.maxSilentPerLen;
-        mdSilentPerLen(1,colIx,masterSliceIx)=stats.mdSilentPerLen;
-        asSilentPerLen(1,colIx,masterSliceIx)=stats.asSilentPerLen;
+        maxSilentPerLen(1,colIx,masterSliceIx)=max(silentEtsl(:,etslc.durCol));
+        % - add statistics not present in struct stats (CVs will be 
+        % computed outside loop):
+        tmpx=prctile(etsl(:,etslc.durCol),[5 50 95]);
+        mdBurstLen(1,colIx,masterSliceIx)=tmpx(2);
+        asBurstLen(1,colIx,masterSliceIx)=(tmpx(3)-tmpx(2))/(tmpx(2)-tmpx(1));
+        if ~isempty(silentEtsl)
+          tmpx=prctile(silentEtsl(:,etslc.durCol),[5 50 95]);
+          mdSilentPerLen(1,colIx,masterSliceIx)=tmpx(2);
+          asSilentPerLen(1,colIx,masterSliceIx)=(tmpx(3)-tmpx(2))/(tmpx(2)-tmpx(1));
+        end
       end
 
       % ---------------- autocorrelation analysis -------------------------
       if doAC
-        if isExtraRec
-          % if it's an extracellular recording compute base line of envelope
-          % and subtract, then compute autocorr (instead of autocov)
-          tmpN=histc(dEnv,wp.envAmpBin);
-          % peak of hist
-          [nix,ix]=max(tmpN);
-          % autocorr
-          tmpC=xcorr(killhum(dEnv-wp.envAmpBin(ix),fi.si,50),autoCLag_pts,'coeff');
-        else
-          tmpC=xcov(d,autoCLag_pts,'coeff');
-        end
+%         % compute base line of envelope and subtract, then compute autocorr
+%         % (instead of autocov)
+%         tmpN=histc(dEnv,wp.envAmpBin);
+%         % peak of hist
+%         [nix,ix]=max(tmpN);
+        % autocorr
+        tmpC=xcov(dEnv,autoCLag_pts,'coeff');
         % keep one-sided
         tmpC=tmpC(autoCLag_pts+1:end);
         autoC(:,curLevel==indepParLevel,masterSliceIx)=tmpC;
-        % compute autoCDecay (=half-width):
+        % compute autoCDecay:
         lim=.25;
         tmp=find(tmpC(1:end-1)>lim & tmpC(2:end)<lim,1);
         if ~isempty(tmp)
@@ -832,135 +724,73 @@ for g=1:nExp
         end
       end
 
-      % --------------- spectral analysis of continuous signals -----------
-      
-      if doSA
-        [pMn,f]=fspecp(d,1e6/ap.sampleFreq,'meth','fft','win',ap.ppSeg,'limFreq',ap.psdFreq);
-        psDensMn(:,curLevel==indepParLevel,masterSliceIx)=pMn;
-        % power in specific freq band
-        specpower(1,colIx,masterSliceIx)=sum(pMn(freqIx))*powScaleFac;
-      end
-      
-      % §§ BURST BASED SPECTRAL ANALYSIS BELOW DEACTIVATED JAN 2012
-      
       % ---------------- burst-based spectral analysis --------------------
-      %       if doSA
-      %         % file-specific checks of cutout lengths etc.
-      %         etsl(:,etslc.tagCol)=0;
-      %         % all bursts long enough (taking ap.winBuCutout into consideration)
-      %         % & not too close to borders
-      %         tmpIx=etsl(:,etslc.durCol)+diff(ap.winBuCutout)>=ap.minLongBurstLength;
-      %         tmpIx=tmpIx & ...
-      %           etsl(:,etslc.tsCol)+ap.winBuCutout(1)>0 & ...
-      %           sum(etsl(:,[etslc.tsCol etslc.durCol]),2)+ap.winBuCutout(2)< diff(head.ds.fileInfo.recTime)*1000;
-      %         etsl(tmpIx,etslc.tagCol)=wp.isLongBurst;
-      %         % index to long bursts
-      %         buLongIx=find(etsl(:,etslc.tagCol)==wp.isLongBurst);
-      %         nBuLong=numel(buLongIx);
-      %       end
-      %       if doSA && nBuLong
-      %         bup=repmat(psdPTemplate,[1 nBuLong]);
-      %         % - beginning of interval containing burst in ticks
-      %         buB=cont2discrete(etsl(:,etslc.tsCol)+ap.winBuCutout(1),1000/ap.sampleFreq,'intv',1);
-      %         % - same for end
-      %         % ********* below, commented: choice of end points as of March 14,
-      %         % 2011, namely, up to the end of the bursts
-      %         % buE=cont2discrete(sum(etsl(:,[etslc.tsCol etslc.durCol]),2)+ap.winBuCutout(2),1000/ap.sampleFreq,'intv',1);
-      %         % current version: ap.ppSeg
-      %         buE=cont2discrete(etsl(:,etslc.tsCol)+ap.winBuCutout(1)+ap.ppSeg,1000/ap.sampleFreq,'intv',1);
-      %         for bix=1:nBuLong
-      %           bud=d(buB(buLongIx(bix)):buE(buLongIx(bix)));
-      %           nPt=numel(bud);
-      %           [bup(:,bix),f]=fspecp(bud,1e6/ap.sampleFreq,'meth','fft','win',ap.ppSeg,'limFreq',ap.psdFreq);
-      %         end
-      %         bupMn=mean(bup,2);
-      %         bupStd=std(bup,0,2);
-      %         psDensMn(:,curLevel==indepParLevel,masterSliceIx)=bupMn;
-      %         psDensStd(:,curLevel==indepParLevel,masterSliceIx)=bupStd;
-      %         % power in specific freq band
-      %         specpower(1,colIx,masterSliceIx)=sum(bupMn(freqIx))*powScaleFac;
-      %       end
-
-      % ---------------- spikes analysis (firing rates & PETH) ------------
-      if doSPX
-        % *** added Feb 2012: if spx tsl is empty event rate is zero; all
-        % other parameters will retain their preallocated values
-        if isempty(tsl)
-          eventRate(1,colIx,masterSliceIx)=0;
-        else
-          Tsl{1,colIx,masterSliceIx}=tsl;
-          % *** in contrast to burst parameters compute average firing rate
-          % as spike count divided by total recording time (NOT cIntvSpan)
-          eventRate(1,colIx,masterSliceIx)=numel(tsl)/diff(head.ds.fileInfo.recTime);
-          isi=diff(tsl);
-          cvISI(1,colIx,masterSliceIx)=std(isi)/mean(isi);
-          if ~isempty(etsl)
-            % - peth: collect spx frequency; collect spx only up to 100 ms
-            % after end of current event
-            [hst,pethBin,nada,scalarPethPar]=etslpeth(etsl,tsl,'interval',ap.pethIntv,...
-              'iRestrict',{'cur',100},'binw',ap.pethBinW,'bin',ap.pethBin,'convHz',1);
-            RawPeth{1,colIx,masterSliceIx}=hst;
-            % average firing rate within bursts
-            eventRateInBurst(1,colIx,masterSliceIx)=scalarPethPar.evRateInBurst;
-            % fraction of events in/outside bursts
-            fractionEvInBurst(1,colIx,masterSliceIx)=scalarPethPar.fractionEvInBurst;
-            fractionEvOutBurst(1,colIx,masterSliceIx)=1-scalarPethPar.fractionEvInBurst;
-            
-            % - within each experiment, average (over bursts) histograms
-            % ** note that etslpeth spits out nans for bursts too close to
-            % either border **
-            pethMn(:,colIx,masterSliceIx)=nanmean(hst,2);
-            pethStd(:,colIx,masterSliceIx)=nanstd(hst,0,2);
-            pethN(:,colIx,masterSliceIx)=sum(isfinite(hst),2);
-            % - now the early etc. peri-event firing rates
-            % a row array listing the average (across bins) firing rate of each
-            % of the bursts
-            tmpFr=nanmean(hst(pethBinIx{1},:),1)/ap.pethBinW*1000;
-            mnPethEarlyFr(1,colIx,masterSliceIx)=nanmean(tmpFr);
-            stdPethEarlyFr(1,colIx,masterSliceIx)=nanstd(tmpFr);
-            
-            tmpFr=nanmean(hst(pethBinIx{2},:),1)/ap.pethBinW*1000;
-            mnPethIntermedFr(1,colIx,masterSliceIx)=nanmean(tmpFr);
-            stdPethIntermedFr(1,colIx,masterSliceIx)=nanstd(tmpFr);
-            
-            tmpFr=nanmean(hst(pethBinIx{3},:),1)/ap.pethBinW*1000;
-            mnPethLateFr(1,colIx,masterSliceIx)=nanmean(tmpFr);
-            stdPethLateFr(1,colIx,masterSliceIx)=nanstd(tmpFr);
-          end
-          if ~isempty(silentEtsl)
-            % - peth: collect spx frequency; restrict to events occurring up
-            % to 10 ms before next burst
-            [hst,spPethBin]=etslpeth(silentEtsl,tsl,'interval',ap.spPethIntv,...
-              'iRestrict',{'cur',-10},'binw',ap.spPethBinW,'bin',ap.spPethBin,'convHz',1);
-            SPRawPeth{1,colIx,masterSliceIx}=hst;
-            % - within each experiment, average (over silent periods) histograms
-            % ** note that etslpeth spits out nans for silent periods too close to
-            % either border **
-            spPethMn(:,colIx,masterSliceIx)=nanmean(hst,2);
-            spPethStd(:,colIx,masterSliceIx)=nanstd(hst,0,2);
-            spPethN(:,colIx,masterSliceIx)=sum(isfinite(hst),2);
-            % - now the early etc. peri-event firing rates
-            % a row array listing the average (across bins) firing rate of each
-            % of the silent periods
-            tmpFr=nanmean(hst(spPethBinIx{1},:),1)/ap.spPethBinW*1000;
-            mnSpPethFr(1,colIx,masterSliceIx)=nanmean(tmpFr);
-            stdSpPethFr(1,colIx,masterSliceIx)=nanstd(tmpFr);
-          end
-        end
+      if doSA
+        % file-specific checks of cutout lengths etc.
+        etsl(:,etslc.tagCol)=0;
+        % all bursts long enough (taking ap.winBuCutout into consideration) 
+        % & not too close to borders
+        tmpIx=etsl(:,etslc.durCol)+diff(ap.winBuCutout)>=ap.minLongBurstLength;
+        tmpIx=tmpIx & ...
+          etsl(:,etslc.tsCol)+ap.winBuCutout(1)>0 & ...
+          sum(etsl(:,[etslc.tsCol etslc.durCol]),2)+ap.winBuCutout(2)< diff(fileInfo(1,colIx,masterSliceIx).recTime)*1000;
+        etsl(tmpIx,etslc.tagCol)=wp.isLongBurst;
+        % index to long bursts
+        buLongIx=find(etsl(:,etslc.tagCol)==wp.isLongBurst);
+        nBuLong=numel(buLongIx);
       end
-      
-      % ---------------- spike triggered average analysis -----------------
-      if doSTA && ~isempty(tsl)
-        % broadband filter
-        staD=bafi(d,fi.si,ap.staFreq);
-        % envelope
-        staD=abs(hilbert(staD));
-        % the average (along time) of spike triggered excerpts 
-        staExc=mean(tsl2exc(staD,fi.si,{tsl},'win',ap.staIntv));
-        % mean, std, median of STA
-        mnSTA(1,colIx,masterSliceIx)=nanmean(staExc);
-        stdSTA(1,colIx,masterSliceIx)=nanstd(staExc);
-        mdSTA(1,colIx,masterSliceIx)=nanmedian(staExc);                
+      if doSA && nBuLong
+        bup=repmat(psdPTemplate,[1 nBuLong]);
+        % - beginning of interval containing burst in ticks
+        buB=cont2discrete(etsl(:,etslc.tsCol)+ap.winBuCutout(1),1000/ap.sampleFreq,'intv',1);
+        % - same for end
+        buE=cont2discrete(sum(etsl(:,[etslc.tsCol etslc.durCol]),2)+ap.winBuCutout(2),1000/ap.sampleFreq,'intv',1);
+        for bix=1:nBuLong
+          bud=d(buB(buLongIx(bix)):buE(buLongIx(bix)));
+          nPt=numel(bud);
+          [bup(:,bix),f]=fspecp(bud,1e6/ap.sampleFreq,'meth','fft','win',ap.ppSeg,'limFreq',ap.psdFreq);
+        end
+        bupMn=mean(bup,2);
+        bupStd=std(bup,0,2);
+        psDensMn(:,curLevel==indepParLevel,masterSliceIx)=bupMn;
+        psDensStd(:,curLevel==indepParLevel,masterSliceIx)=bupStd;
+        % power in specific freq band
+        specpower(1,colIx,masterSliceIx)=sum(bupMn(freqIx))*powScaleFac;
+      end
+
+      % ---------------- spikes analysis ----------------------------------
+      if doSPX && ~isempty(tsl)
+        Tsl{1,colIx,masterSliceIx}=tsl;
+        % *** in contrast to burst parameters compute average firing rate
+        % as spike count divided by total recording time (NOT cIntvSpan)
+        eventRate(1,colIx,masterSliceIx)=numel(tsl)/diff(head.ds.fileInfo.recTime);
+        if ~isempty(etsl)
+          % - peth: collect spx/bin, not spx frequency; do not collect spx
+          % belonging to next ref event
+          [hst,pethBin]=tslpeth(etsl(:,etslc.tsCol),tsl,'interval',ap.pethIntv,...
+            'intvDistance',.1,'binw',ap.pethBinW,'convHz',0);
+          % - within each experiment, average (over bursts) histograms
+          % ** note that tslpeth spits out nans for bursts too close to
+          % either border **
+          hstMn=nanmean(hst,2);
+          hstStd=nanstd(hst,0,2);
+          pethMn(:,curLevel==indepParLevel,masterSliceIx)=hstMn;
+          pethStd(:,curLevel==indepParLevel,masterSliceIx)=hstStd;
+          % - now the early etc. peri-event firing rates
+          % a row array listing the average (across bins) firing rate of each
+          % of the bursts
+          tmpFr=mean(hst(pethBinIx{1},:),1)/ap.pethBinW*1000;
+          mnPethEarlyFr(1,colIx,masterSliceIx)=nanmean(tmpFr);
+          stdPethEarlyFr(1,colIx,masterSliceIx)=nanstd(tmpFr);
+
+          tmpFr=mean(hst(pethBinIx{2},:),1)/ap.pethBinW*1000;
+          mnPethIntermedFr(1,colIx,masterSliceIx)=nanmean(tmpFr);
+          stdPethIntermedFr(1,colIx,masterSliceIx)=nanstd(tmpFr);
+
+          tmpFr=mean(hst(pethBinIx{3},:),1)/ap.pethBinW*1000;
+          mnPethLateFr(1,colIx,masterSliceIx)=nanmean(tmpFr);
+          stdPethLateFr(1,colIx,masterSliceIx)=nanstd(tmpFr);
+        end
       end
     end % for: curExpChanIx
   end
@@ -974,8 +804,6 @@ cvBurstPeak=stdBurstPeak./mnBurstPeak;
 cvPethEarlyFr=stdPethEarlyFr./mnPethEarlyFr;
 cvPethIntermedFr=stdPethIntermedFr./mnPethIntermedFr;
 cvPethLateFr=stdPethLateFr./mnPethLateFr;
-cvSpPethFr=stdSpPethFr./mnSpPethFr;
-cvSTA=stdSTA./mnSTA;
 
 % ----- aftermaths:
 % - warn of missing and problematic files
@@ -1033,11 +861,10 @@ indepPar_s=indepPar;
 tmp=strcat(masterDepPar(:,1),'_norm');
 save([ap.resPath '\' ap.resFn],...
   'ap_s','indepPar_s','masterDepPar','expChanName','fileInfo',...
-  'drug1_conc','drug1_applicRank','recSite','undef1','undef2',...
-  'RawPeth','SPRawPeth','Etsl','SilentEtsl','Tsl',...
+  'drug1_applicRank','undef1','undef2',...
+  'Etsl','SilentEtsl','Tsl',...
   'psdF','psDensMn','psDensStd','autoC',...
-  'pethBin','pethMn','pethStd','pethN',...
-  'spPethBin','spPethMn','spPethStd','spPethN',...
+  'pethBin','pethMn','pethStd',...
   'indepParLevel','indepParNLevel','indepParNormIx',...
   masterDepPar{:,1},tmp{:});
 

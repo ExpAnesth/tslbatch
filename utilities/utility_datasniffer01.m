@@ -9,113 +9,31 @@ clear
 % ******************* START USER INPUT ************************************
 
 % mat file name (without extension)
-mFn='d:\hh\projects\ctx_propoSevo\data_extra\PropoSevo_ctx_wtb6_SPX_sum_raw.mat';
-curIpVal=[0 .2 .5 .7];
-% mat file name (without extension)
-% mFn='d:\hh\projects\STN\resultsnfigs\stn_mdma.mat';
-% mFn='d:\hh\projects\STN\resultsnfigs\stn_mdma_spiel.mat';
-% mFn='D:\hh\projects\STN\resultsnfigs\stn_mdma_mdl_250_123.mat';
-% mFn='d:\hh\projects\STN\resultsnfigs\stn_mdma_cit_new.mat';
-% mFn='d:\hh\projects\STN\resultsnfigs\stn_mdma_desi_new.mat';
-% mFn='d:\hh\projects\STN\resultsnfigs\stn_mdma_nom_new.mat';
-% curIpVal=[0 2.5 5 10 20];
-
-% mFn='d:\_data\otc_ctx\NO711\tslbatchPlots\NO711\tslbatch_NO711.mat';
-% curIpVal=[0 10 50 250 500 1000];
-
-% mFn='d:\_data\otc_ctx\SNAP5114\tslbatchPlots\tslbatch_SNAP.mat';
-% curIpVal=[0 2.5 5 10 20];
-
-% mFn='d:\_data\otc_ctx\muscimol\tslbatchplots\tslbatch_muscimol.mat';
-% curIpVal=[0 .125 .25 .5];
-% curIpVal=[0 .25];
-
+% mFn='D:\hh\projects\STN\m\figures\stn_mdma_spiel.mat';
+mFn='d:\hh\projects\ctx_gabaUptake\resultsnfigs_SNAP\tslbatchPlots\tslbatch_SNAP.mat';
 % mFn='D:\_data\otc_ctx\AChDiazepam\Experiment1\resultsnfigs_spx\AchDiazepam_SPX.mat';
 % mFn='d:\_data\otc_ctx\AChDiazepam\Experiment1\resultsnfigs_fp\AchDiazepam_FP.mat';
+mFn='d:\hh\_tbs\AChpilot.mat';
 
-% % hh versions 
-% mFn='d:\_data\otc_ctx\ACh\BlockDia\tslbatchPlots_BlockDia\tslbatch_BlockDia.mat';
-% mFn='d:\_data\otc_ctx\ACh\AChDia\tslbatchPlots_AChDia\tslbatch_AChDia.mat';
-% 
-% % LL versions
-% mFn='d:\_data\otc_ctx\ACh\BlockZolp\tslbatchPlots_BlockZolp\Blocker_Zolpi.mat';
-% mFn='d:\_data\otc_ctx\ACh\AChZolp\tslbatchPlots_AChZolp\ACh_Zolpi.mat';
-
-
-% mFn='d:\_data\otc_ctx\_oxygen\tslbatchPlots\tslbatch_oxygen.mat';
-% curIpVal=1:5;
-% 
-% mFn='e:\_data\otc_ctx\diazepam\tslbatchPlots_dia\tslbatch_dia.mat';
-% curIpVal=[0 250 1000];
 
 % levels of independent variable (=concentrations in most cases) to deal
 % with IN ASCENDING ORDER
-
-% curIpVal=[0 50 250];
-% curIpVal=[0 1 2 3]-1;
-
-% curIpVal=[0];
-
-
-% curIpVal=[0:2 4];
-% curIpVal=[0 5];
-% curIpVal=[0 1 2 3 4];
-% curIpVal=[0 1];
-% the independent var value to which data will be normalized (set to [] for
-% no normalization)
-normIpVal=0;
-% normIpVal=[];
-% normIpVal=1;
-
-
-% average electrodes from cultures ??§§!!???++*##'""??
-doAvEl=true;
-
-% outliers can be eliminated in either of two ways: 
-% - if outlierType is set to 'abs' outlierThresh MUST contain TWO values in
-% ASCENDING order, namely the lower and upper limit of acceptable values
-% - if outlierType is set to 'std' outlierThresh MUST contain ONE value,
-% the logic being that for each independent value (concentration) data
-% points beyond [mean +/- outlierThresh*standard deviation of the whole population]
-% will be kicked
-% In case you don't want to eliminate any data points set outlierType to
-% 'none'
-outlierType='std';
-outlierThresh=2.5;
-
-% outlierType='abs';
-% outlierThresh=[0 3];
-% 
-outlierType='none';
+% curIpVal=[0 250];
+% curIpVal=[0 2.5 5 10 20];
+curIpVal=[0 1 2];
 
 % parameter(s) of interest
-
-par={'mdSilentPerLen'};
-% par={'maxSilentPerLen'};
-% par={'mdBurstLen'};
-% par={'asBurstLen'};
-% par={'maxBurstLen'};
-
-% par={'burstRate'};
-% par={'burstIntegral'};
-
+% par={'asBurstLen','mdBurstLen'};
 % par={'specpower'};
+% par={'asBurstLen'};
 % par={'mnBurstStrength_norm'};
-% par={'mnBurstPeak'};
-% par={'relTimeInBurst'};
-
+% par={'mnBurstLen_norm','burstRate_norm'};
+par={'mnSilentPerLen'};
+% par={'mnBurstLen'};
+% par={'relTimeInBurst_norm'};
 % par={'eventRate_norm'};
-par={'eventRate'}; 
-% par={'cvISI'}; 
-% par={'eventRateInBurst'};
-% par={'fractionEvOutBurst'};
-% par={'fractionEvInBurst'};
-% par={'mnPethEarlyFr'};
-% par={'mnPethIntermedFr'};
-% par={'mnPethLateFr'};
-
-% par={'mdSTA'};
-
+% par={'mnBurstStrength_norm'};
+% par={'burstRate_norm'};
 
 printas=[];  % don't save graphics
 % printas='-djpeg97'; % save as jpeg ('working style')
@@ -129,9 +47,7 @@ job='dose response graph';
 switch job
   case 'fit';
     jobOpt={'Hill'};
-    jobOpt={'Hillbilly'};
-    jobOpt={'linear'};
-
+    % jobOpt={'linear'};
   case 'dose response graph'
     % create an unfitted and/or 2D dose response graph
     % By default, unmatched samples will be plotted in a line graph. If a
@@ -139,35 +55,31 @@ switch job
     % options, use any combination of the options
     %       {'matched samples','bar','list'};
     % ** note: if two parameters are specified a 2D plot will be created
-    % this will kick any recording in which there is no data for any of the
-    % independent values
-    jobOpt={'matched samples'};
-    jobOpt={''};
-    % jobOpt={'list'};
-    
+    jobOpt={' '};
   case 'effect dependence'
-    % the parameter of interest (variable 'par' defined above) will be
-    % plotted versus some property of the recording. The 'property' may be
-    % any of the precomputed dependent parameters or something else (see
-    % below) at a (drug) condition of your choice.
+    % the parameter of interest (first element of variable 'par') will be
+    % plotted versus some property of the recording under a drug condition
+    % to be specified below. The 'property' may be another of the
+    % precomputed dependent parameters or something else (see below). This
+    % option is more general and it allows a computation of arbitrary
+    % parameters from the collected results
     % Choose either a precomputed dependent parameter like 'mnBurstLen' or
     % 'burstiness'
-    jobOpt={'mdBurstLen'};
-    % the (drug) condition of the property in question
-    curAbscissIpVal=0;
+    % jobOpt={'eventRate'};
+    jobOpt={'maxBurstLen'};
+    % jobOpt={'burstiness'};
+    % jobOpt={'drug1_applicRank'};
+    % the concentration at which the property in question shall be quantified
+    ipVal=0;
 end
 
 % graphics options
-labelscale('fontSz',12,'scaleFac',.8,'lineW',2,'markSz',9);
-
+labelscale('fontSz',12,'scaleFac',.6,'lineW',1.5,'markSz',10);
 ornt='portrait';
 % name & full path to figure to be saved
-% figName=['d:\hh\projects\ctx_gabaUptake\rawFig\' par{1} '_' job];
-figName=['d:\hh\projects\STN\paper\' par{1} '_' job];
+figName=['D:\hh\projects\ctx_gabaUptake\rawFig\' par{1} '_' job];
 
 
-% ******************* END USER INPUT **************************************
-% ******************* END USER INPUT **************************************
 % ******************* END USER INPUT **************************************
 % ******************* END USER INPUT **************************************
 
@@ -178,35 +90,20 @@ load(mFn);
 
 % in most cases, the independent parameter is the concentration of the
 % substance in question. This command plots its levels of on screen
-disp('available levels of indep par:');
-indepParLevel'
-disp('chosen levels of indep par:');
-curIpVal
-
-% *** columnIx is the index to columns of interest in all variables
-[nix,columnIx]=intersect(indepParLevel,curIpVal(:));
-if ~isequal(nix,curIpVal(:))
+indepParLevel
+% index to columns in all variables
+[nix,columnIx]=intersect(indepParLevel,curIpVal);
+if ~isequal(nix,curIpVal)
   errordlg({'variable ''curIpVal'' contains values that do not exist in the data.',...
     'Available values: ', num2str(indepParLevel)})
   return
 end
-
-% a tribute to changes of variables across versions of tslbatch
-if ~exist('expChanName','var')
-  expChanName=expChanID;
-end
-
-if strcmp(job,'effect dependence')
-  if numel(par)>1
-    error('in job ''effect dependence'' only one dependent parameter may be specified in variable ''par''; the other must be specified in variable ''jobOpt''');
-  end
-  % if effect dependence is the job at hand make jobOpt first parameter
-  % (=abscissa value)
-  par=cat(2,jobOpt,par);
-end
-
-% reshape data such that for each parameter it's 2D
+    
+% reshape data such that it's 2D
+% - specific independent pars
+% drug1_applicRank=permute(drug1_applicRank,[3 2 1]); 
 % - dependent pars
+
 d=[];
 for g=1:numel(par)
   tmpd=eval(par{g});
@@ -215,141 +112,30 @@ for g=1:numel(par)
   d(~isfinite(d))=nan;
 end
 
-% keep only columns of interest - now d and curIpVal match
-d=d(:,columnIx,:);
-
-% average electrodes from same culture?
-if doAvEl
-  figure; hold on; orient(ornt);
-  nECh=numel(expChanName);
-  expName={};
-  d2=nan(size(d));
-  d3=[];
-  ct=1;
-  list=1:nECh;
-  while ~isempty(list)
-    curExp=expChanName{list(1)};
-    commaIx=strfind(curExp,',');
-    expName{ct}=curExp(1:commaIx-1);
-    % index to entries of current exp
-    ix=find(strncmp(curExp(1:commaIx-1),expChanName,commaIx-1));
-    d2(ct,:,:)=nanmean(d(ix,:,:),1);
-    % if there are two recording sites...
-    if numel(ix)>1
-      % (consider only first variable)
-      goodIx=all(isfinite(d(ix,:,1)));
-      if any(goodIx)
-        % ... collect data such that the correlation between them can be
-        % computed
-        d3=cat(1,d3,d(ix,goodIx,1)');
-        plot(d(ix(1),goodIx),d(ix(2),goodIx),'o-');
-      end
-    end
-    list=setdiff(list,ix);
-    ct=ct+1;
-  end
-  % overwrite, killing the superfluous preallocated rows 
-  d=d2(1:ct-1,:,:);
-  
-  % remove normalized control values from d3, if any
-  d3(all(d3==1,2),:)=[];
-  % finally, correlation
-  tmp=corrcoef(d3);
-  disp(['correlation between recording sites for (first) chosen parameter: ' num2str(tmp(1,2))]);
-  
-  axis tight
-  axis square
-  title('any key to continue');
-  pause
-  
-end
-
-
-% normalize, if requested
-if ~isempty(normIpVal) && isfinite(normIpVal)
-  % the column in d to which all others will be normalized
-  col=find(curIpVal==normIpVal);
-  d=d./repmat(d(:,col,:),[1 size(d,2) 1]);
-  d(isinf(d))=nan;
-end
-
-% run of the mill-preprocessing
-d_av=nanmean(d);
-sd=nanstd(d);
-finIx=isfinite(d);
-n=sum(finIx);
-sem=sd./sqrt(n);
-ci=sem.* -permute(tinv(.05/2,permute(n,[3 2 1])-1),[3 2 1]);
-d_var=sd;
-% d_var=sem;
-
-% kick outliers, if requested
-switch outlierType
-  case 'abs'
-    if numel(outlierThresh)~=2
-      error('parameter ''outlierThresh'' must contain TWO values because ''outlierType'' is set to ''abs''');
-    else
-      if diff(outlierThresh)<=0
-        error('parameter ''outlierThresh'' must contain two ASCENDING values');
-      end
-      badIx=d<outlierThresh(1) | d>outlierThresh(2);
-      disp(['eliminating ' int2str(numel(find(badIx))) ' outliers']);
-      d(badIx)=nan;
-    end
-  case 'std'
-    badIx=d<repmat(d_av-outlierThresh*sd,size(d,1),1) | ...
-      d>repmat(d_av+outlierThresh*sd,size(d,1),1);
-    disp(['eliminating ' int2str(numel(find(badIx))) ' outliers']);
-    d(badIx)=nan;
-  case 'none'
-    disp('elimination of outliers not requested');
-  otherwise
-    error('bad choice for parameter ''outlierType''');
-end
-
-% by default, all rows with at least one non-nan value are good
-goodIx=any(isfinite(sum(d,3)),2);
-
-% % a slightly more demanding criterion: there must be at least two non-nan
-% % values per row
-% goodIx=sum(isfinite(sum(d,3)),2)>1;
-
-if ~isempty(strmatch('matched samples',jobOpt))
-  % only rows without any nan are good
-  goodIx=all(isfinite(sum(d,3)),2);
-end
-
-% delete all bad rows 
-d=d(goodIx,:,:);
-expChanName=expChanName(goodIx);
-
-% run of the mill-processing reloaded
-d_av=nanmean(d);
-sd=nanstd(d);
-finIx=isfinite(d);
-n=sum(finIx);
-sem=sd./sqrt(n);
-ci=sem.* -permute(tinv(.05/2,permute(n,[3 2 1])-1),[3 2 1]);
-d_var=sd;
-% d_var=sem;
-  
-
-% **** jobs proper ****
 switch job
   case 'fit'
     curIpVal=repmat(curIpVal,size(d,1),1);
+    d=d(:,columnIx,:);
     curIpVal=curIpVal(:);
     d=d(:);
     goodIx=(isfinite(d));
     ds.crf=[curIpVal(goodIx),d(goodIx)];
-    isNormalized= ~isempty(strfind(par{1},'_norm')) || ~isempty(normIpVal);
-    if strncmp('Hill',jobOpt,4)
-
-
-      % THIS IS THE DEFAULT CASE
-      [ds,stats]=fitmaster(ds,jobOpt{1},'errType','sd','isNormalizedData',isNormalized,'invertVal',1);
-%       %  THIS IS FOR STN DATA
-%       [ds,stats]=fitmaster(ds,jobOpt{1},'errType','sd','isNormalizedData',isNormalized,'invertVal',nan);
+    isNormalized= ~isempty(strfind(par{1},'_norm'));
+    if strmatch('Hill',jobOpt)
+      if ~isNormalized
+        error('Hill fit works only on normalized data');
+      end
+      
+%       % *********** a hack for importing NO-711 data
+%       load d:\hh\projects\ctx_gabaUptake\rawFig\plot_wsdata_export.mat
+%       % get rid of nans
+%       d(isnan(d(:,2)),:)=[]
+%       % convert conc to uM
+%       d(:,1)=d(:,1)/1000;
+%       ds.crf=d;
+%       % ********************************************
+      
+      [ds,stats]=fitmaster(ds,jobOpt{1},'errType','ci','isNormalizedData',isNormalized,'invertVal',1);
     else
       [ds,stats]=fitmaster(ds,jobOpt{1},'errType','ci','isNormalizedData',isNormalized);
     end
@@ -358,12 +144,26 @@ switch job
     orient(ornt);
     
   case 'dose response graph'
+    d=d(:,columnIx,:);
+    if ~isempty(strmatch('matched samples',jobOpt))
+      % delete all rows with any nan
+      d=d(all(isfinite(sum(d,3)),2),:);
+    end
+    % mean, sd, ci
+    d_av=nanmean(d);
+    sd=nanstd(d);
+    finIx=isfinite(d);
+    n=sum(finIx);
+    sem=sd./sqrt(n);
+    ci=sem.* -permute(tinv(.05/2,permute(n,[3 2 1])-1),[3 2 1]);
+    d_var=ci;    
+    % d_var=sem;
     if ~isempty(strmatch('list',jobOpt))
       clc
-      [strvcat(expChanName) repmat('   ',[size(d,1) 1])  num2str(d)]
+      [strvcat(expChanID) repmat('   ',[size(d,1) 1])  num2str(d)]
     end
     % plot
-    figure; hold on; orient(ornt);
+    figure(1); clf; hold on; orient(ornt);
     if numel(par)<=1
       if ~isempty(strmatch('bar',jobOpt))
         bh=bar(curIpVal,d_av,'k');
@@ -399,23 +199,10 @@ switch job
     end
     
   case 'effect dependence'
-    % the independent value of the abscissa par 
-    abscissParCol=find(curIpVal==curAbscissIpVal);
-%     % if y values to be plotted include values at the independent par
-%     % value used for normalization, kick them, because their y values will
-%     % all be 1 anyways
-%     killColIx=columnIx==indepParNormIx;
-%     d(:,killColIx,:)=nan;
-    xlab=[jobOpt{1} ' at ' num2str(curIpVal(abscissParCol))];
-    figure(1); clf; hold on; orient(ornt);
-    ph=plot(d(:,abscissParCol,1),d(:,:,2),'o');
-    nicexyax
-    xlabel(xlab)
-    ylabel(par{2})
-    legend(ph,num2str(indepParLevel(setdiff(columnIx,indepParNormIx))));
-
-  case 'effect dependence_old'
     par=par{1};
+    if isempty(strfind(par,'_norm'))
+      par=[par '_norm'];
+    end
     d=eval(par);
     d=permute(d,[3 2 1]);
     if exist('Tsl','var')
@@ -429,33 +216,33 @@ switch job
     tmpColIx=setdiff(columnIx,indepParNormIx);
     d=d(:,tmpColIx);
     % the column in d in which to quantify property
-    abscissParCol=find(indepParLevel==curAbscissIpVal);
+    col=find(indepParLevel==ipVal);
     switch jobOpt{1}
       case 'burst length'
         abscissVal=permute(mdBurstLen,[3 2 1]);
-        abscissVal=abscissVal(:,abscissParCol);
-        xlab=['median of burst length at ' num2str(indepParLevel(abscissParCol))]; 
+        abscissVal=abscissVal(:,col);
+        xlab=['median of burst length at ' num2str(indepParLevel(col))]; 
       case 'variability burst length'
         abscissVal=permute(cvBurstLen,[3 2 1]);
-        abscissVal=abscissVal(:,abscissParCol);
-        xlab=['CV of burst length at ' num2str(indepParLevel(abscissParCol))]; 
+        abscissVal=abscissVal(:,col);
+        xlab=['CV of burst length at ' num2str(indepParLevel(col))]; 
       case 'asymmetry burst length'
         abscissVal=permute(asBurstLen,[3 2 1]);
-        abscissVal=abscissVal(:,abscissParCol);
-        xlab=['asymmetry of burst length at ' num2str(indepParLevel(abscissParCol))]; 
+        abscissVal=abscissVal(:,col);
+        xlab=['asymmetry of burst length at ' num2str(indepParLevel(col))]; 
       case 'burstiness'
         abscissVal=repmat(nan,[size(Tsl,1) 1]);
         for g=1:size(Tsl,1)
-          tmpIsi=diff(Tsl{g,abscissParCol});
+          tmpIsi=diff(Tsl{g,col});
           abscissVal(g)=std(tmpIsi)./mean(tmpIsi);
         end
         % coefficient of variation of inter-spike interval
-        xlab=['CV of ISI at ' num2str(indepParLevel(abscissParCol))]; 
+        xlab=['CV of ISI at ' num2str(indepParLevel(col))]; 
       otherwise
         abscissVal=eval(jobOpt{1});
         abscissVal=permute(abscissVal,[3 2 1]);
-        abscissVal=abscissVal(:,abscissParCol);
-        xlab=[jobOpt{1} ' at ' num2str(indepParLevel(abscissParCol))];         
+        abscissVal=abscissVal(:,col);
+        xlab=[jobOpt{1} ' at ' num2str(indepParLevel(col))];         
     end
     figure(1); clf; hold on; orient(ornt);
     ph=plot(abscissVal,d,'o');

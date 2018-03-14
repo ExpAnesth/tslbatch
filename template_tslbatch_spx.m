@@ -30,7 +30,6 @@ ap.subsetPar={...
 % (abbreviations: std=standard deviation, cv=coefficient of variation)
 ap.depPar={...
   'eventRate',            true;... % firing rates
-  'cvISI',                false;...% cv of inter-spike-interval (makes sense only for single units)
   'fractionEvInBurst',    true;... % fraction of spx in bursts
   'relTimeInBurst',       true;... % relative time spent in bursts ('active' time)
   'mnNEvPerBurst',        true;... % mean of number of events in burst
@@ -40,12 +39,12 @@ ap.depPar={...
   'mnBurstLen',           true;... % mean length of bursts
   'mdBurstLen',           true;... % median of length of bursts
   'cvBurstLen',           true;... % cv of length of bursts
-  'asBurstLen',           true;... % asymmetry of length of bursts: (95th percentile-2*median+5th percentile)/median
+  'asBurstLen',           true;... % asymmetry of length of bursts: (95th percentile-median)/(median-5th percentile)
   'burstRate',            true;... % burst rate
   'mnSilentPerLen',       true;... % mean length of silent period
   'mdSilentPerLen',       true;... % median of length of silent period
   'cvSilentPerLen',       true;... % cv of length of silent period
-  'asSilentPerLen',       true;... % asymmetry of length of silent periods
+  'asSilentPerLen',       true;... % asymmetry of length of bursts: (95th percentile-median)/(median-5th percentile)
   'mnPethEarlyFr',        true;... % mean of early firing rate
   'cvPethEarlyFr',        true;... % cv of early firing rate
   'mnPethIntermedFr',     true;... % mean of intermediate firing rate
@@ -57,11 +56,11 @@ ap.depPar={...
 
 % DATA DISPLAY OPTIONS
 % if true, data for each individual experiment will be plotted
-ap.IndividExperimentPlot=true;
+ap.IndividExperimentPlot=false;
 % output format for figures (e.g. '-djpeg95', '-dpsc2'; set to [] if
 % figures shall not be saved)
 ap.printFig='-djpeg95';
-% ap.printFig=[];
+ap.printFig=[];
 
 % ANALYSIS PARAMETERS
 % i) general burst detection parameters
@@ -93,19 +92,18 @@ ap.pethLateFrIntv=[500 1000];
 % PATHS TO DATA DIRECTORIES
 % - rootp points to the *base* directory containing results from spike &
 % burst detection
-ap.rootPath='d:\_data\otc_ctx\bicuIncub\';
+ap.rootPath=['e:\_data\otc_ctx\ACSF_Mg\'];
 
 % resPath points to the directory in which figures and final results file
 % will be collected
-ap.resPath=ap.rootPath;
+ap.resPath=['e:\_data\otc_ctx\ACSF_Mg\tslbatchPlots_ACSF_Mg\'];
 % name of the *.mat file (without extension) into which results will be
 % saved
-ap.resFn='bicuIncub_Mg'
+ap.resFn='ACSF_Mg';
 
 % the name of the 'master table' (excel) file. 
-% ** it must reside in the  root directory as defined above **
 % ** only the first worksheet will be read **
-ap.masterFn=[ap.rootPath '\masterTableBicuMg.xls'];
+ap.masterFn='d:\hh\matlab\beastybites\tslbatch\tempate_recordingList_tslbatch.xls';
 
 % -----------------------------------------------------------------------
 % ----- PART II: call the data-reading & -processing functions ----------

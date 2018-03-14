@@ -17,7 +17,10 @@ fileNameIx=strmatch('fileName',parNm);
 chanNameIx=strmatch('chanName',parNm);
 drug1_concIx=strmatch('drug1_conc',parNm);
 drug1_applicRankIx=strmatch('drug1_applicRank',parNm);
-
+drug2_concIx=strmatch('drug2_conc',parNm);
+ageAtPrepIx=strmatch('ageAtPrep',parNm);
+prepIDIx=strmatch('prepID',parNm);
+daysInVIx=strmatch('daysInV',parNm);
 etslconst;
 
 % - check ap & set flags
@@ -85,7 +88,6 @@ end
 % generation of summary plots
 masterDepPar={...
   'eventRate'            , 1, 2;... % firing rates
-  'cvISI'                , 1, 2;...% cv of inter-spike-interval
   'fractionEvInBurst'    , 1, 2;... % fraction of spx in bursts
   'relTimeInBurst'       , 1, 2;... % relative time spent in bursts ('active' time)
   'mnNEvPerBurst'        , 1, 2;... % mean of number of events in burst
@@ -127,10 +129,6 @@ nDepPar=size(ap.depPar,1);
 % -------------------------------------------------------------------------
 %                PART I: purges of observations
 % -------------------------------------------------------------------------
-% §§ convert text parameters like cultureType that may eventually be used
-% as indep par to numbers
-
-
 % ** the information about exclusion criteria has been transferred from
 % ap.subsetPar to indepPar at this point (in tslbatch_defdata) **
 % logical array pointing to observations to be killed
@@ -249,8 +247,6 @@ scalarTemplate=repmat(nan,[1 indepParNLevel nUExpChan]);
 
 % - firing rates
 eventRate=scalarTemplate;
-% - cv of ISI
-cvISI=scalarTemplate;
 % - fraction of spx in bursts
 fractionEvInBurst=scalarTemplate;
 % - relative time spent in bursts ('active' time)
@@ -287,8 +283,14 @@ cvPethIntermedFr=scalarTemplate;
 mnPethLateFr=scalarTemplate;
 stdPethLateFr=scalarTemplate;
 cvPethLateFr=scalarTemplate;
-% also export application rank order (may be useful)
+
+% also export independent parameters that may be of use
+drug1_conc=scalarTemplate;
 drug1_applicRank=scalarTemplate;
+drug2_conc=scalarTemplate;
+ageAtPrep=scalarTemplate;
+prepID=scalarTemplate;
+daysInV=scalarTemplate;
 
 % important: have a 1D cell array with as many elements as the results
 % variables above have 'slices': it contains strings identifying the
@@ -351,16 +353,6 @@ for g=1:nExp
       tmpFnBody=[indepPar(fileNameIx).d{curExpChanIx(i)} '_' dbch '_spx_res'];
       isExistentFile=[exist([datDir '\' tmpFnBody '.mat.txt'],'file'),...
         exist([datDir '\' tmpFnBody '.mat'],'file')];
-%       % find out whether ap_bu exists in matfile: if that is not so either
-%       % burst detection has not been performed or it has been done with an
-%       % earlier version of burstdetgui. In either case, don't use the
-%       % matfile.
-%       if isExistentFile(2)==2
-%         fileContent=whos('-file',[datDir '\' tmpFnBody '.mat']);
-%         if isempty(strmatch('ap_bu',{fileContent.name}))
-%           isExistentFile(2)=0;
-%         end
-%       end
       % ** file usage rules:
       % - if both files are present use txt file
       % - if only either file present use it
@@ -438,88 +430,18 @@ for g=1:nExp
           filesNoBurstAnalysis{end+1}=tmpFnBody;
           doBurstAnalysis=false;
         end
-
-%         % §§§****&&&$$§§§§§******§§§****&&&$$§§§§§******§§§****&&&$$§§§§§******
-%         % pssst! secret, provisional code to produce cutouts from
-%         % raw data and tsl...
-% 
-%         if ~isempty(tsl)
-%           % adjust directory and channel names
-%           ddi=strrep(origHead.ds.dataPath,'E:\ll\rawData\','D:\_data\STN\');
-%           fn=[ddi origHead.ds.dataFn];
-%           if ~isempty(strfind(origHead.ap.resFn,'_IN0_'))
-%             chacha={'IN 0'};
-%           else
-%             chacha={'IN 1'};
-%           end
-%           % pick first 100 spx
-%           nPickEvt=min(100,numel(tsl)-1);
-%           % interval for cutouts (ms)
-%           winEvCutout=[-1 2];
-%           % load raw data
-%           [d,osi]=abfload(fn,'channels',chacha,'stop',tsl(nPickEvt+1)/1000);
-%           % filter
-%           d=hifi(d,osi,origHead.ap.hiCFreq);
-%           % convert event list of detected events to ticks for cutting out excerpts
-%           tmpTsl=cont2discrete(tsl,osi/1e3,'intv',1);
-%           tmpwinEvCutout=cont2discrete(winEvCutout,osi/1e3,'intv',1);
-%           % cut out
-%           evCutout=tsl2exc(d,'idx',{tmpTsl(1:nPickEvt)},'win',tmpwinEvCutout);
-%           % target sampling interval in us 
-%           siTarget=10;
-%           % check whether these are more or less stable waveforms
-%           r=evdeal(evCutout,'idx','minmaxpeak');
-%           if std(r.maxPeak)/mean(r.maxPeak)<.3
-%             % new discrete time axis
-%             upsampT=linspace(tmpwinEvCutout(1),tmpwinEvCutout(2),(diff(tmpwinEvCutout)+1)*osi/siTarget);
-%             [nix,zeroIdx]=min(abs(upsampT));
-%             % upsample cutouts
-%             upsampEvCutout=interp1(tmpwinEvCutout(1):tmpwinEvCutout(2),evCutout,upsampT,'spline');
-%             % average
-%             mnEvCutout=mean(upsampEvCutout,2);
-%             % determine max peak again
-%             r=evdeal(mnEvCutout,'idx','minmaxpeak');
-%             if mean(r.maxPeak)> -mean(r.minPeak)
-%               tshift=r.maxPeakT-zeroIdx;
-%               nFac=r.maxPeak;
-%             else
-%               tshift=r.minPeakT-zeroIdx;              
-%               nFac=-r.minPeak;
-%             end
-%             % shift circularly...
-%             mnEvCutout=circshift(mnEvCutout,-tshift);
-%             % normalize to min/max peak
-%             mnEvCutout=mnEvCutout/nFac;
-%             % preallocate main results variable if it does not yet exist
-%             if ~exist('evExc','var')
-%               evExc=repmat(nan*mnEvCutout,[1 indepParNLevel nUExpChan]);
-%             end
-%             evExc(:,colIx,masterSliceIx)=mnEvCutout;
-%             % plot(upsampT,mnEvCutout)
-%             % drawnow
-%           end
-%           % to shorten things...
-%           doBurstAnalysis=false;
-%         end
-
-%  ***** THIS WILL HAVE TO REPLACE SAVE COMMAND BELOW *****
-% save([ap.resPath '\' ap.resFn],'ap_s','indepPar_s','expChanName',...
-%   'Tsl','Etsl','SilentEtsl',...
-%   'pethBin','pethMn','pethStd',...
-%   'indepParLevel','indepParNLevel','indepParNormIx',...
-%   'drug1_applicRank',...
-%   'evExc',...
-%   masterDepPar{:,1},tmp{:});
-
-%         % §§§****&&&$$§§§§§******§§§****&&&$$§§§§§******§§§****&&&$$§§§§§******        
-
+        % ------------ fill independent parameter export arrays -----------
+        drug1_conc(1,colIx,masterSliceIx)=indepPar(drug1_concIx).d(curExpChanIx(i));
+        drug1_applicRank(1,colIx,masterSliceIx)=indepPar(drug1_applicRankIx).d(curExpChanIx(i));
+        drug2_conc(1,colIx,masterSliceIx)=indepPar(drug2_concIx).d(curExpChanIx(i));
+        ageAtPrep(1,colIx,masterSliceIx)=indepPar(ageAtPrepIx).d(curExpChanIx(i));
+        prepID(1,colIx,masterSliceIx)=indepPar(prepIDIx).d(curExpChanIx(i));
+        daysInV(1,colIx,masterSliceIx)=indepPar(daysInVIx).d(curExpChanIx(i));
+        
         % ---------------- compute parameters ---------------------
         % - event (spx) rate (must be computed here because a firing rate
         % of zero (=empty tsl) is perfectly valid)
         eventRate(1,colIx,masterSliceIx)=numel(tsl)/head.rectime;
-        isi=diff(tsl);
-        cvISI(1,colIx,masterSliceIx)=std(isi)/mean(isi);
-        drug1_applicRank(1,colIx,masterSliceIx)=indepPar(drug1_applicRankIx).d(curExpChanIx(i));
         
         % if this is a recording 
         % - with zero events 
@@ -571,12 +493,12 @@ for g=1:nExp
           if ~isempty(etsl)
             tmpx=prctile(etsl(:,etslc.durCol),[5 50 95]);
             mdBurstLen(1,colIx,masterSliceIx)=tmpx(2);
-            asBurstLen(1,colIx,masterSliceIx)=(tmpx(3)-2*tmpx(2)+tmpx(1))/(tmpx(3)-tmpx(1));
+            asBurstLen(1,colIx,masterSliceIx)=(tmpx(3)-tmpx(2))/(tmpx(2)-tmpx(1));
           end
           if ~isempty(silentEtsl)
             tmpx=prctile(silentEtsl(:,etslc.durCol),[5 50 95]);
             mdSilentPerLen(1,colIx,masterSliceIx)=tmpx(2);
-            asSilentPerLen(1,colIx,masterSliceIx)=(tmpx(3)-2*tmpx(2)+tmpx(1))/(tmpx(3)-tmpx(1));
+            asSilentPerLen(1,colIx,masterSliceIx)=(tmpx(3)-tmpx(2))/(tmpx(2)-tmpx(1));
           end
           % - peth: collect spx/bin, not spx frequency; do not collect spx
           % belonging to next ref event
@@ -666,36 +588,7 @@ save([ap.resPath '\' ap.resFn],'ap_s','indepPar_s','expChanName',...
   'Tsl','Etsl','SilentEtsl',...
   'pethBin','pethMn','pethStd',...
   'indepParLevel','indepParNLevel','indepParNormIx','masterDepPar',...
-  'drug1_applicRank',...
+  'drug1_conc','drug1_applicRank','drug2_conc',...
+  'ageAtPrep','prepID','daysInV',...
   masterDepPar{:,1},tmp{:});
 
-  
-% <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  
-% INTERNAL NOTE
-% In this version of tslbatch all dependent variables will always be
-% computed and saved in their entirety. Furthermore, normalized variants 
-% of all variables will be generated by default and saved along the
-% non-normalized ones. The user has control only over the variables to be
-% plotted.
-% To implement a version allowing the user full control over the
-% computation do the following:
-% - use second column of masterDepPar to differentiate between scalar and
-% truly 3D variables like histograms. More precisely, collect all results
-% in a cell array with as many elements as dep pars and preallocate
-% accordingly. This allows for auotmatization of results collection:
-%
-%       % place all results in a cell array (in the order defined in ap.depPar) and
-%       % assign to separate variables only at end
-%       r=cell(nDepPar,1);
-%       for g=1:nDepPar
-%         switch ap.depPar{g,2}
-%           case 1
-%             r{g}=scalarTemplate;
-%           case 2
-%             r{g}=pethTemplate;
-%           otherwise
-%             error('ask the programmer');
-%         end
-%       end
-%
-% - run computations conditionally

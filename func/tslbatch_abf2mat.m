@@ -100,17 +100,9 @@ for g=1:nDir
   for fIx=1:numel(s)
     [nada,niente,fi]=abfload([datDir '\' s(fIx).name],'info');
     if fi.nOperationMode==3
-      try
-        abfmerge2mat({s(fIx).name(1:end-4)},'dDir',datDir,'sampFreq',ap.sampleFreq,...
-          'cFreq',[ap.hiCFreq ap.loCFreq],'ch',uChan);
-      catch
-        % the most likely mishap is that within the files of one directory
-        % recorded channels are not the same - in case there is some mismatch
-        % convert all channels
-        abfmerge2mat({s(fIx).name(1:end-4)},'dDir',datDir,'sampFreq',ap.sampleFreq,...
-          'cFreq',[ap.hiCFreq ap.loCFreq]);
-      end
+      abfmerge2mat({s(fIx).name(1:end-4)},'dDir',datDir,'sampFreq',ap.sampleFreq,...
+        'cFreq',[ap.hiCFreq ap.loCFreq],'ch',uChan);
     end
-  end
+  end    
 end
 

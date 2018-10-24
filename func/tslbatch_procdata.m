@@ -4,6 +4,12 @@ function tslbatch_procdata(indepPar,ap)
 % end of this m-file.
 
 % -------------------------------------------------------------------------
+% Version 2.1.2, October 2018
+% (C) Harald Hentschke (University Hospital of Tuebingen)
+% -------------------------------------------------------------------------
+
+
+% -------------------------------------------------------------------------
 %             PART 0: preliminaries: auxil pars & checks of ap
 % -------------------------------------------------------------------------
 % names & number of parameters in indepPar

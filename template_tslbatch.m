@@ -1,7 +1,7 @@
 % This is the basic template for a script which collects, analyzes and
-% plots processed SPIKE data from in vitro drug experiments. In PART I the
-% type of analysis is set up. You have to define independent variables
-% (e.g. concentration) and dependent variables (the things we measure, e.g.
+% plots processed data from in vitro drug experiments. In PART I the type
+% of analysis is set up. You have to define independent variables (e.g.
+% concentration) and dependent variables (the things we measure, e.g.
 % firing rates). Furthermore, and importantly, you may (have to) select
 % specific parts of the data in the data base. This is what 'ap.subsetPar'
 % is good for. Details see below. PART II is the specific analysis.
@@ -70,11 +70,6 @@ ap.minSilentPerDur='original';
 % maximal number of events in pre-burst silent period
 % - may be set to 'original'
 ap.minSilentPerNEv='original';
-% length (ms) beyond which a burst will be regarded a 'freak' event 
-% - may be set to 'original'
-% ** NOT YET IMPLEMENTED **
-ap.maxNormalBurstLength=inf;
-
 
 % ii) peri-event time histograms
 % ms, the time interval around a burst start (t=0) in which spikes will be
@@ -103,7 +98,7 @@ ap.resFn='ACSF_Mg';
 
 % the name of the 'master table' (excel) file. 
 % ** only the first worksheet will be read **
-ap.masterFn='d:\hh\matlab\beastybites\tslbatch\tempate_recordingList_tslbatch.xls';
+ap.masterFn='d:\hh\matlab\projects_ephys\tslbatch\template_recordingList_tslbatch.xlsx';
 
 % -----------------------------------------------------------------------
 % ----- PART II: call the data-reading & -processing functions ----------

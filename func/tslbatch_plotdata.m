@@ -2,6 +2,11 @@ function tslbatch_plotdata(fn,varargin)
 % ** function tslbatch_plotdata(fn,varargin)
 % plotting routine of tslbatch workhorse. See the documentation.
 
+% -------------------------------------------------------------------------
+% Version 2.1.2, October 2018
+% (C) Harald Hentschke (University Hospital of Tuebingen)
+% -------------------------------------------------------------------------
+
 etslconst;
 load(fn)
 % if ap is given as input arg use it. Be aware that only a few fields have 
@@ -75,7 +80,7 @@ tmpScrSz=get(0,'Screensize');
 tmpScrSz([1 2])=tmpScrSz([1 2])+tmpScrSz([3 4])*.02;
 tmpScrSz([3 4])=tmpScrSz([3 4]).*[.5 .9];
 set(fh,'position',tmpScrSz,'tag',ftag,'name',ftag,'color',[.9 .9 1],'numbertitle','off');
-cm=coma('jet','ncols',nExpChanName);
+cm=coma('jet','n',nExpChanName);
 
 % define simple callbacks for mouse click on idividual data points
 callB=cell(nExpChanName,1);

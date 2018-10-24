@@ -58,6 +58,10 @@ indepPar(g).name='genotype';
 indepPar(g).dType='char';
 
 g=g+1;
+indepPar(g).name='recSite';
+indepPar(g).dType='double';
+
+g=g+1;
 indepPar(g).name='undef1';
 indepPar(g).dType='double';
 

@@ -96,14 +96,14 @@ ap.rootPath=['e:\_data\otc_ctx\ACSF_Mg\'];
 
 % resPath points to the directory in which figures and final results file
 % will be collected
-ap.resPath=['e:\_data\otc_ctx\ACSF_Mg\tslbatchPlots_ACSF_Mg\'];
+ap.resPath=['e:/_data/otc_ctx/ACSF_Mg/tslbatchPlots_ACSF_Mg/'];
 % name of the *.mat file (without extension) into which results will be
 % saved
 ap.resFn='ACSF_Mg';
 
 % the name of the 'master table' (excel) file. 
 % ** only the first worksheet will be read **
-ap.masterFn='d:\hh\matlab\beastybites\tslbatch\tempate_recordingList_tslbatch.xls';
+ap.masterFn='projects_ephys/tslbatch/template_recordingList_tslbatch.xls';
 
 % -----------------------------------------------------------------------
 % ----- PART II: call the data-reading & -processing functions ----------

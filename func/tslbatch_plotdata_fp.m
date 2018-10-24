@@ -15,7 +15,7 @@ end
 indepPar=indepPar_s;
 % (re-) compute some vars
 % *** all FP scalar parameters
-[tmp,dpIx]=union(ap.depPar(:,1),masterDepPar(cat(1,masterDepPar{:,3})==2,1));
+[tmp,dpIx]=intersect(ap.depPar(:,1),masterDepPar(cat(1,masterDepPar{:,3})==1,1));
 ap.depPar=ap.depPar(sort(dpIx),:);
 nDepPar=size(ap.depPar,1);
 nExpChanName=numel(expChanName);
@@ -45,7 +45,9 @@ ebType='ci'; % sd
 % - target sampling freq of burst cutout figure (Hz) in individual plots
 fs_buCutout=200;
 % - length of burst cutout figure (s) in individual plots
-len_buCutout=1;
+len_buCutout=.5;
+% - same for silent periods
+len_spCutout=.5;
 % - create figure with return maps?
 doReturnMap=false;
 
@@ -77,7 +79,14 @@ tmpScrSz=get(0,'Screensize');
 tmpScrSz([1 2])=tmpScrSz([1 2])+tmpScrSz([3 4])*.02;
 tmpScrSz([3 4])=tmpScrSz([3 4]).*[.5 .9];
 set(fh,'position',tmpScrSz,'tag',ftag,'name',ftag,'color',[.9 .9 1],'numbertitle','off');
+% colormap for plots in which color codes for individual experiments
 cm=coma('jet','ncols',nExpChanName);
+% colormap for plots in which color codes for independent par (conc mostly)
+cmIdep=coma('jet','ncols',numel(nwIx));
+if doWash
+  % append gray for wash
+  cmIdep=cat(1,cmIdep,[.6 .6 .6]);
+end
 
 % define simple callbacks for mouse click on idividual data points
 callB=cell(nExpChanName,1);
@@ -89,13 +98,18 @@ end
 % plot psDens
 psDensMnMn=nanmean(psDensMn,3);
 subplot(nRow,2,1), hold on
+set(gca,'colororder',cmIdep);
 ph=plot(psdF,psDensMnMn(:,nwIx));
-set(ph,'linewidth',1.2)
+set(ph,'linewidth',1.4)
 set(gca,'xlim',psdF([1 end]),'xscale','log','yscale','lin');
 % omit x axis label - will shrink axis
 % xlabel('Freq (Hz)');
 ylabel('psd');
-legend(ph,num2str(indepParLevel_nw),'Location','eastoutside');
+% legend(ph,num2str(indepParLevel_nw),'Location','eastoutside');
+for ii=1:numel(indepParLevel_nw)
+  smarttext(num2str(indepParLevel_nw(ii)),.8,1-.09*ii,'fontweight','bold',...
+    'fontsize',8,'HorizontalAlignment','right','color',cmIdep(ii,:));
+end
 
 % collection of handles for scalar results: experiments in rows, dependent
 % parameters in columns
@@ -165,7 +179,8 @@ if ap.IndividExperimentPlot
   % - reserve:
   % -- first row of figure for for raw plots 
   % -- second row for burst cutouts
-  % -- third row for spectra
+  % -- third row for silent period cutouts  
+  % -- fourth row for spectra
   
   % - semi-explicit assignment of rows and columns
   if nDepPar==1
@@ -173,17 +188,19 @@ if ap.IndividExperimentPlot
     nRow=4;
   elseif nDepPar<=6
     nCol=2;
-    nRow=ceil(nDepPar/nCol)+3;
+    nRow=ceil(nDepPar/nCol)+4;
   else
     nCol=3;
-    nRow=ceil(nDepPar/nCol)+3;
+    nRow=ceil(nDepPar/nCol)+4;
   end
-  % the subplot offset for burst cutout plot
-  buExcSpOffs=2;
+%   % the subplot offset for burst cutout plot
+%   buExcSpOffs=2;
+%   % the subplot offset for silent period cutout plot
+%   spExcSpOffs=2;
   % the subplot offset for psDens & buLen tc plot
-  psDensSpOffs=4;
+  psDensSpOffs=6;
   % the subplot offset for scalar plots
-  scalarSpOffs=nCol*3;
+  scalarSpOffs=nCol*4;
   
   fh_indiv=figure(2); orient tall, clf
   ftag='individual plot';
@@ -209,43 +226,63 @@ if ap.IndividExperimentPlot
     clf
     isRawDataFound=false;
     % container for complete recordings of current experiment
-    dd={[]};
+    collD={[]};
     % container for arrays of nans (as long as recording) with bursts
     % embedded
-    dd_bu=dd;
+    collD_bu=collD;
     % container for bursts
-    d_bu=dd;
+    d_buExc=collD;
+    % container for silent periods
+    d_spExc=collD;
     % index 
-    ddIx=0;
+    collDIx=0;
     % wash recording last
     for j=[nwIx washIx]
       curRawFn=[fileInfo(1,j,g).dDir '\' fileInfo(1,j,g).fileName '.mat'];
       if exist(curRawFn,'file')
         isRawDataFound=true;
-        ddIx=ddIx+1;
+        collDIx=collDIx+1;
         tmpCh={expChanName{g}(strfind(expChanName{g},',')+2:end)};
         [d,si]=matDload(curRawFn,'channels',tmpCh);
         % downsample to ~fs_buCutout Hz for these coarse overview plots, no matter what
         sampFac=floor((1e6/fs_buCutout)/si);
         si=si*sampFac;
         d=d(1:sampFac:end);
-        dd{ddIx}=d;
-        dd_bu{ddIx}=repmat(nan,size(d));
-        % index to cutouts:
-        % - exact
+        collD{collDIx}=d;
+        collD_bu{collDIx}=repmat(nan,size(d));
+        % cut out bursts:
+        % - exact index to cutouts
         tmpBuIx=cumsum(Etsl{1,j,g}(:,[etslc.tsCol etslc.durCol]),2);
         buIx=cont2discrete(tmpBuIx,si/1000);
-        % - shifted by 50 ms to left so that base line can be seen
-        buIx_shift=cont2discrete(tmpBuIx-50,si/1000);        
-        % preallocate (1 s length)
+        % - index shifted by 50 ms to left so that base line can be seen
+        buIx_shift=cont2discrete(tmpBuIx-50,si/1000);
+        % preallocate 
         len_buCutout_pts=floor(len_buCutout/(si/1e6));
-        d_buExc{ddIx}=repmat(nan,len_buCutout_pts,size(buIx,1));
+        d_buExc{collDIx}=repmat(nan,len_buCutout_pts,size(buIx,1));
         for cix=1:size(buIx,1)
           % embed
-          dd_bu{ddIx}(buIx(cix,1):buIx(cix,2))=d(buIx(cix,1):buIx(cix,2));
-          % collect up to length of 1 s (shifted version)
+          collD_bu{collDIx}(buIx(cix,1):buIx(cix,2))=d(buIx(cix,1):buIx(cix,2));
+          % collect up to length of .5 s (shifted version)
           redIx=1:min(diff(buIx_shift(cix,[1 2])),len_buCutout_pts);
-          d_buExc{ddIx}(redIx,cix)=d(buIx_shift(cix,1):buIx_shift(cix,1)+redIx(end)-1);
+          if ~isempty(redIx) && buIx_shift(cix,1)>0
+            d_buExc{collDIx}(redIx,cix)=d(buIx_shift(cix,1):buIx_shift(cix,1)+redIx(end)-1);
+          end
+        end
+        % cut out silent periods:
+        % - exact index to cutouts
+        tmpSpIx=cumsum(SilentEtsl{1,j,g}(:,[etslc.tsCol etslc.durCol]),2);
+        spIx=cont2discrete(tmpSpIx,si/1000);
+        % - index shifted by 400 ms to left 
+        spIx_shift=cont2discrete(tmpSpIx-400,si/1000);        
+        % preallocate
+        len_spCutout_pts=floor(len_spCutout/(si/1e6));
+        d_spExc{collDIx}=repmat(nan,len_spCutout_pts,size(spIx,1));
+        for cix=1:size(spIx,1)
+          % collect (shifted version)
+          redIx=1:min(diff(spIx_shift(cix,[1 2])),len_spCutout_pts);
+          if ~isempty(redIx) && spIx_shift(cix,1)>0
+            d_spExc{collDIx}(redIx,cix)=d(spIx_shift(cix,1):spIx_shift(cix,1)+redIx(end)-1);
+          end
         end
       end
     end
@@ -254,20 +291,34 @@ if ap.IndividExperimentPlot
     sph=subplot(nRow,1,1);
     cla
     if isRawDataFound
-      [ylim,dy,yscaleFac,ph]=pllplot(dd,'si',si,'noscb',1);
+      [ylim,dy,yscaleFac,ph]=pllplot(collD,'si',si,'noscb',1);
       set(ph,'linewidth',.25);
       hold on
-      [ylim,dy,yscaleFac,ph]=pllplot(dd_bu,'si',si,'ylim',ylim,'spacing','fixed','dy',dy,'noscb',1);
+      [ylim,dy,yscaleFac,ph]=pllplot(collD_bu,'si',si,'ylim',ylim,'spacing','fixed','dy',dy,'noscb',1);
       set(ph,'linewidth',.3,'color','m');
     end
 
-    % ii) burst excerpts
+    % ii a) burst excerpts
     if isRawDataFound
-      axhArr=repmat(nan,1,ddIx);
-      for j=1:ddIx
-        axhArr(j)=subplot(nRow,ddIx,j+ddIx);
-        if ~isempty(d_buExc{j})
+      axhArr=repmat(nan,1,collDIx);
+      for j=1:collDIx
+        axhArr(j)=subplot(nRow,collDIx,j+collDIx);
+        if ~isempty(d_buExc{j}) && any(any(isfinite(d_buExc{j})))
           [ylim,dy,yscaleFac,ph]=pllplot(d_buExc{j},'si',si,'spacing','fixed','dy',.000001,'noscb',1);
+          set(ph,'linewidth',.35);
+          axis tight
+        end
+      end
+      subpax(gcf,'spInd',axhArr);
+    end
+
+    % ii b) silent period excerpts
+    if isRawDataFound
+      axhArr=repmat(nan,1,collDIx);
+      for j=1:collDIx
+        axhArr(j)=subplot(nRow,collDIx,j+2*collDIx);
+        if ~isempty(d_spExc{j}) && any(any(isfinite(d_spExc{j})))
+          [ylim,dy,yscaleFac,ph]=pllplot(d_spExc{j},'si',si,'spacing','fixed','dy',.000001,'noscb',1);
           set(ph,'linewidth',.35);
           axis tight
         end
@@ -277,15 +328,13 @@ if ap.IndividExperimentPlot
     
     % iii) time course of bu len
     subplot(nRow,2,1+psDensSpOffs)
-    % get standard colororder 
-    colorOrd=get(gca,'colorOrder');
     cla, hold on
     ct=0;
     for j=[nwIx washIx]
       ct=ct+1;
       etsl=Etsl{1,j,g};
       ph=plot(etsl(:,etslc.tsCol)/1000,etsl(:,etslc.durCol)/1000);
-      set(ph,'linewidth',1.2,'color',colorOrd(ct,:),'marker','v','markersize',4);
+      set(ph,'linewidth',1.2,'color',cmIdep(ct,:),'marker','v','markersize',4);
     end
     niceyuax;
     xlabel('time (s)');
@@ -294,15 +343,21 @@ if ap.IndividExperimentPlot
     % iv) psDens
     subplot(nRow,2,2+psDensSpOffs)
     cla, hold on
-    % get standard colororder 
-    colorOrd=get(gca,'colorOrder');
+    % set colororder 
+    set(gca,'colororder',cmIdep);
     ph=plot(psdF,psDensMn(:,[nwIx washIx],g));
-    set(ph,'linewidth',1.2)
+    set(ph,'linewidth',1.4)
     niceyuax;
     set(gca,'xlim',psdF([1 end]),'xscale','log','yscale','lin');
     xlabel('Freq (Hz)');
     ylabel('psd');
-    legend(ph,num2str(indepParLevel([nwIx washIx])),'Location','EastOutside');
+    % legend(ph,num2str(indepParLevel([nwIx washIx])),'Location','EastOutside');
+    tmp=indepParLevel([nwIx washIx]);
+    for ii=1:numel(tmp)
+      smarttext(num2str(tmp(ii)),.8,1-.09*ii,'fontweight','bold',...
+        'fontsize',8,'HorizontalAlignment','right','color',cmIdep(ii,:));
+    end
+
 
     % v) loop over scalar results
     for k=1:nDepPar
@@ -322,10 +377,14 @@ if ap.IndividExperimentPlot
       end
       hold off
       nicexyax(8);
-      % set lower y limit to zero so that changes are somwhat put into
+      % set lower OR upper y limit to zero so that changes are somwhat put into
       % perspective
       yl=get(gca,'ylim');
-      set(gca,'ylim',[0 yl(2)]);
+      if yl(2)>0
+        set(gca,'ylim',[0 yl(2)]);
+      else
+        set(gca,'ylim',[yl(1) 0]);
+      end
       set(gca,'xtick',indepParLevel);
       th=title(ap.depPar{k,1});
     end
@@ -353,7 +412,7 @@ if ap.IndividExperimentPlot
         silentEtsl=SilentEtsl{1,h,g};
         nSp=size(silentEtsl,1);
         plotArr=repmat(nan,max(nBu,nSp),2);
-        pCol=colorOrd(mod(h-1,size(colorOrd,1))+1,:);
+        pCol=cmIdep(mod(h-1,size(cmIdep,1))+1,:);
         if nSp>1 && nBu>0
           plotArr(1:nBu,1)=etsl(:,etslc.durCol);
           % if first burst comes before first silent period...
@@ -377,7 +436,7 @@ if ap.IndividExperimentPlot
       for h=1:indepParNLevel
         etsl=Etsl{1,h,g};
         nBu=size(etsl,1);
-        pCol=colorOrd(mod(h-1,size(colorOrd,1))+1,:);        
+        pCol=cmIdep(mod(h-1,size(cmIdep,1))+1,:);        
         if nBu>1
           ph=plot(etsl(2:end,etslc.durCol),etsl(1:end-1,etslc.durCol),'o');
           set(ph,'color',pCol,'markerfacecolor',pCol,'markersize',4);
@@ -391,5 +450,3 @@ if ap.IndividExperimentPlot
     end    
   end
 end
-
-

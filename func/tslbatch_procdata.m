@@ -4,7 +4,7 @@ function tslbatch_procdata(indepPar,ap)
 % end of this m-file.
 
 % -------------------------------------------------------------------------
-% Version 2.1.2, October 2018
+% Version 2.1.3, November 2018
 % (C) Harald Hentschke (University Hospital of Tuebingen)
 % -------------------------------------------------------------------------
 
@@ -14,19 +14,18 @@ function tslbatch_procdata(indepPar,ap)
 % -------------------------------------------------------------------------
 % names & number of parameters in indepPar
 parNm={indepPar.name};
-nPar=length(indepPar);
 
 % some indices into indepPar needed throughout
-expIDIx=strmatch('expID',parNm);
-isValidIx=strmatch('isValid',parNm);
-fileNameIx=strmatch('fileName',parNm);
-chanNameIx=strmatch('chanName',parNm);
-drug1_concIx=strmatch('drug1_conc',parNm);
-drug1_applicRankIx=strmatch('drug1_applicRank',parNm);
-drug2_concIx=strmatch('drug2_conc',parNm);
-ageAtPrepIx=strmatch('ageAtPrep',parNm);
-prepIDIx=strmatch('prepID',parNm);
-daysInVIx=strmatch('daysInV',parNm);
+expIDIx=strcmp('expID',parNm);
+isValidIx=strcmp('isValid',parNm);
+fileNameIx=strcmp('fileName',parNm);
+chanNameIx=strcmp('chanName',parNm);
+drug1_concIx=strcmp('drug1_conc',parNm);
+drug1_applicRankIx=strcmp('drug1_applicRank',parNm);
+drug2_concIx=strcmp('drug2_conc',parNm);
+ageAtPrepIx=strcmp('ageAtPrep',parNm);
+prepIDIx=strcmp('prepID',parNm);
+daysInVIx=strcmp('daysInV',parNm);
 etslconst;
 
 % - check ap & set flags
@@ -70,7 +69,7 @@ end
 % histograms, must be all nans (as opposed to zeros) because this is how
 % recordings with zero events should be represented
 hstTemplate=nan*hstTemplate;
-if isempty(find(pethBin==0))
+if isempty(find(pethBin==0, 1))
   error('the bins for the PETH must include a bin with zero as its left border');
 end
 % see whether pefr intervals are included in pethBin and, while doing so,
@@ -126,7 +125,7 @@ masterDepPar={...
 
 tmp=setdiff(ap.depPar(:,1),masterDepPar(:,1));
 if ~isempty(tmp)
-  errordlg({'Analysis parameters'; ' '; strvcat(tmp); ' '; 'do not exist (check spelling - NO BLANKS ARE ALLOWED).'; ' '; 'Here is the full list of legal parameters:'; ' '; strvcat(masterDepPar(:,1))});
+  errordlg({'Analysis parameters'; ' '; char(tmp); ' '; 'do not exist (check spelling - NO BLANKS ARE ALLOWED).'; ' '; 'Here is the full list of legal parameters:'; ' '; char(masterDepPar(:,1))});
   error('see error dialog');
 end
 nMasterDepPar=size(masterDepPar,1);
@@ -183,7 +182,7 @@ end
 %                PART II: setup of master results variables
 % -------------------------------------------------------------------------
 % identify individual 'experiments' 
-[uExp,ix1,ix2]=unique(cellstr(indepPar(expIDIx).d));
+[uExp,~,ix2]=unique(cellstr(indepPar(expIDIx).d));
 nExp=length(uExp);
 
 % some additional precautionary checks
@@ -208,7 +207,7 @@ if strcmp(indepPar(aIndepIx).name,'drug1_conc')
   % check whether drug 1 applic rank order of control (as defined by conc==0) is 0
   tmpIx=indepPar(drug1_concIx).d==0 & indepPar(drug1_applicRankIx).d~=0;
   if any(tmpIx)
-    warndlg({'In ';' '; strvcat(indepPar(expIDIx).d{tmpIx}); ' '; 'at least one control recording (defined as [drug1]=0) has an application rank different from 0 - make sure that this is correct';'(If so and you don''t want this message to keep popping up talk to HH'});
+    warndlg({'In ';' '; char(indepPar(expIDIx).d{tmpIx}); ' '; 'at least one control recording (defined as [drug1]=0) has an application rank different from 0 - make sure that this is correct';'(If so and you don''t want this message to keep popping up talk to HH'});
   end
 end
 
@@ -221,7 +220,7 @@ indepParNormIx=find(indepParLevel==indepPar(aIndepIx).normVal);
 % number of observations (=atsl files)
 nObs=size(indepPar(1).d,1);
 % convert channel name to ID...
-[nix,nix2,tmpChanID]=unique(indepPar(chanNameIx).d);
+[~,~,tmpChanID]=unique(indepPar(chanNameIx).d);
 % ...to obtain number of unique combinations of experiment ID and channel
 nUExpChan=size(unique([ix2 tmpChanID],'rows'),1);
 
@@ -248,7 +247,7 @@ pethStd=pethTemplate;
 
 % --- dimensions of SCALAR values like firing rates:
 %   <one row> | indep par value | <unique combin experiment, channel>
-scalarTemplate=repmat(nan,[1 indepParNLevel nUExpChan]);
+scalarTemplate=nan([1 indepParNLevel nUExpChan]);
 
 
 % - firing rates
@@ -338,7 +337,7 @@ for g=1:nExp
   % --- loop over channels
   for h=1:nChan
     % index into indepPar.d for channels of current experiment
-    curExpChanIx=intersect(curExpIx,strmatch(uChan(h),indepPar(chanNameIx).d,'exact'));
+    curExpChanIx=intersect(curExpIx,strcmp(uChan(h),indepPar(chanNameIx).d,'exact'));
     masterSliceIx=masterSliceIx+1;
     % fill expChanName: experiment ID + file name
     expChanName{masterSliceIx}=[indepPar(expIDIx).d{curExpChanIx(1)},...
@@ -552,19 +551,19 @@ if ~isempty(filesNotFound)
   msg='the following files are listed as useable in the master list but could not be found:';
   warndlg(cat(2,{msg},filesNotFound));
   warning(msg);
-  disp(strvcat(filesNotFound{:}))
+  disp(char(filesNotFound{:}))
 end
 if ~isempty(filesNoBurstAnalysis)
   msg='the following files are listed as useable in the master list but did not contain burst analysis parameters:';
   warndlg(cat(2,{msg},filesNoBurstAnalysis));
   warning(msg);
-  disp(strvcat(filesNoBurstAnalysis{:}))
+  disp(char(filesNoBurstAnalysis{:}))
 end
 if ~isempty(filesEmptyTsl)
   msg='the following files are listed as useable in the master list but had empty time stamp lists (=zero firing rate). This is legal, but you may want to check nonethless';
   warndlg(cat(2,{msg},filesEmptyTsl));
   warning(msg);
-  disp(strvcat(filesEmptyTsl{:}))
+  disp(char(filesEmptyTsl{:}))
 end
 
 

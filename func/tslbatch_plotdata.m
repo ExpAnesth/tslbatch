@@ -3,7 +3,7 @@ function tslbatch_plotdata(fn,varargin)
 % plotting routine of tslbatch workhorse. See the documentation.
 
 % -------------------------------------------------------------------------
-% Version 2.1.2, October 2018
+% Version 2.1.3, November 2018
 % (C) Harald Hentschke (University Hospital of Tuebingen)
 % -------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ indepPar=indepPar_s;
 
 % re-compute some vars
 % *** all SPX scalar parameters
-[tmp,dpIx]=union(ap.depPar(:,1),masterDepPar(cat(1,masterDepPar{:,3})==1,1));
+[~,dpIx]=union(ap.depPar(:,1),masterDepPar(cat(1,masterDepPar{:,3})==1,1));
 ap.depPar=ap.depPar(sort(dpIx),:);
 nDepPar=size(ap.depPar,1);
 nExpChanName=numel(expChanName);
@@ -73,7 +73,8 @@ end
 % the subplot offset for scalar plots
 scalarSpOffs=nCol;
 
-fh=figure(1); orient tall, clf
+fh=figure(1); orient tall
+clf
 ftag='summary plot';
 labelscale('fontSz',8,'scaleFac',1.0,'lineW',1.2,'markSz',6);
 tmpScrSz=get(0,'Screensize');
@@ -110,7 +111,7 @@ legend(ph,num2str(indepParLevel_nw),'Location','Southeast');
 
 % collection of handles for scalar results: experiments in rows, dependent
 % parameters in columns
-phArr=repmat(nan,nExpChanName,nDepPar);
+phArr=nan(nExpChanName,nDepPar);
 % loop over scalar results
 for k=1:nDepPar
   % normalized version? 
@@ -154,7 +155,7 @@ for k=1:nDepPar
   th=title(ap.depPar{k,1});
 end
 
-if ~isempty(ap.printFig), 
+if ~isempty(ap.printFig)
   print(ap.printFig,'-r400',[ap.resPath ap.resFn '_SPX_sum']); 
 end
 
@@ -191,7 +192,8 @@ if ap.IndividExperimentPlot
   % the subplot offset for scalar plots
   scalarSpOffs=nCol*2;
   
-  fh=figure(2); orient tall, clf
+  fh=figure(2); orient tall
+  clf
   ftag='individual plot';
   labelscale('fontSz',8,'scaleFac',1.0,'lineW',1.2,'markSz',6);
   tmpScrSz=get(0,'Screensize');
@@ -266,7 +268,7 @@ if ap.IndividExperimentPlot
         y=y(1,:,g)';
         subplot(nRow,nCol,k+scalarSpOffs)
         % all except wash
-        ph=plot(indepParLevel(nwIx),y(nwIx),'ko-');
+        plot(indepParLevel(nwIx),y(nwIx),'ko-');
         % overplot point representing control value
         hold on
         ph=plot(indepParLevel(indepParNormIx),y(indepParNormIx),'ko-');
@@ -286,7 +288,7 @@ if ap.IndividExperimentPlot
       end
       figtitle(expChanName{g});
       % print & 'refresh' figure, otherwise too much load
-      if ~isempty(ap.printFig),
+      if ~isempty(ap.printFig)
         % devise a friendly file name from expChanName: replace comma by
         % underscore and remove whitespace
         pfn=strrep(expChanName{g}(~isspace(expChanName{g})),',','_');

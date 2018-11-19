@@ -337,7 +337,7 @@ for g=1:nExp
   % --- loop over channels
   for h=1:nChan
     % index into indepPar.d for channels of current experiment
-    curExpChanIx=intersect(curExpIx,strcmp(uChan(h),indepPar(chanNameIx).d,'exact'));
+    curExpChanIx=intersect(curExpIx,find(strcmp(uChan(h),indepPar(chanNameIx).d)));
     masterSliceIx=masterSliceIx+1;
     % fill expChanName: experiment ID + file name
     expChanName{masterSliceIx}=[indepPar(expIDIx).d{curExpChanIx(1)},...
